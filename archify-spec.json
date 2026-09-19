@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "components": [
+    {
+      "type": "backend",
+      "label": "dev-standards",
+      "id": "repo",
+      "pos": [
+        660,
+        410
+      ],
+      "size": [
+        280,
+        180
+      ]
+    },
+    {
+      "type": "backend",
+      "label": "Dockerfile",
+      "id": "docker",
+      "pos": [
+        660,
+        10
+      ],
+      "size": [
+        280,
+        180
+      ]
+    },
+    {
+      "type": "backend",
+      "label": "CI/CD",
+      "id": "ci",
+      "pos": [
+        1060,
+        410
+      ],
+      "size": [
+        280,
+        180
+      ]
+    },
+    {
+      "type": "backend",
+      "label": "config.yaml",
+      "id": "config",
+      "pos": [
+        660,
+        810
+      ],
+      "size": [
+        280,
+        180
+      ]
+    },
+    {
+      "type": "backend",
+      "label": ".env.example",
+      "id": "env",
+      "pos": [
+        260,
+        410
+      ],
+      "size": [
+        280,
+        180
+      ]
+    }
+  ],
+  "diagram_type": "architecture",
+  "connections": [
+    {
+      "to": "docker",
+      "from": "repo"
+    },
+    {
+      "to": "ci",
+      "from": "repo"
+    },
+    {
+      "to": "config",
+      "from": "repo"
+    },
+    {
+      "to": "env",
+      "from": "repo"
+    }
+  ],
+  "meta": {
+    "title": "dev-standards",
+    "output": "archify.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1600,
+      1000
+    ]
+  }
+}

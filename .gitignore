@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+build/
+*.log
+
+# Go
+vendor/
+*.exe
+*.test
+
+# Rust
+target/
+Cargo.lock
+
+# Entornos
+.env
+.venv
+venv/
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Datos y artefactos
+data/
+*.db
+*.sqlite
+*.duckdb
+*.parquet
+*.arrow
+*.bin
+*.model
+*.pth
+*.onnx
+*.safetensors
+
+# Docker
+.docker/
+
+# Local tool state
+.continue/
+.omc/
+__pycache__/

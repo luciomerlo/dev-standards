@@ -1,4 +1,4 @@
-﻿# Manual de Directivas de IngenierÝa (RULES.md)
+# Manual de Directivas de IngenierÝa (RULES.md)
 
 Este documento consolidado establece los estßndares, patrones arquitect¾nicos y directrices de ingenierÝa obligatorios, extraÝdos y destilados de la experiencia acumulada en m·ltiples proyectos del ecosistema. Su cumplimiento es mandatorio para garantizar la resiliencia, mantenibilidad y escalabilidad del software.
 
@@ -41,7 +41,10 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
 
 ## 5. Versionado, CHANGELOG e Integridad de Repositorios
 
-*   **5.1. Versionado Semßntico (SemVer):** Todo proyecto debe adherirse estrictamente a SemVer (`MAJOR.MINOR.PATCH`). Cualquier cambio que rompa la compatibilidad de contratos o interfaces incrementarß obligatoriamente la versi¾n *Major*.
-*   **5.2. Gesti¾n de Cambios (CHANGELOG):** Mantener un archivo `CHANGELOG.md` actualizado y estructurado en cada repositorio, documentando de forma clara los cambios bajo las categorÝas de *Added*, *Changed*, *Deprecated*, *Removed*, *Fixed* y *Security*.
-*   **5.3. Higiene de Repositorios y Artefactos:** Excluir explÝcitamente mediante `.gitignore` directorios de datos generados (`data/`, `build/`, directorios de descargas, cachÚs de lenguaje, entornos virtuales y archivos binarios pesados o manuales), desacoplando estrictamente el c¾digo fuente de los artefactos transitorios.
-*   **5.4. Sincronizaci¾n de Dependencias y Entornos:** Versionar y fijar (*pin*) dependencias crÝticas de motores externos o binarios de terceros cuando se identifiquen regresiones. Especificar restricciones estrictas de versiones del entorno de ejecuci¾n (ej. campo `engines` en Node.js) alineadas con flujos de CI multiversi¾n.
+*   **5.1. Versionado Semántico (SemVer):** Todo proyecto debe adherirse estrictamente a SemVer (`MAJOR.MINOR.PATCH`). Cualquier cambio que rompa la compatibilidad de contratos o interfaces incrementará obligatoriamente la versión *Major*.
+*   **5.2. Gestión de Cambios (CHANGELOG):** Mantener un archivo `CHANGELOG.md` actualizado y estructurado en cada repositorio, documentando de forma clara los cambios bajo las categorías de *Added*, *Changed*, *Deprecated*, *Removed*, *Fixed* y *Security*. Seguir el formato [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+*   **5.3. Higiene de Repositorios y Artefactos:** Excluir explícitamente mediante `.gitignore` directorios de datos generados (`data/`, `build/`, directorios de descargas, cachés de lenguaje, entornos virtuales y archivos binarios pesados o manuales), desacoplando estrictamente el código fuente de los artefactos transitorios.
+*   **5.4. Sincronización de Dependencias y Entornos:** Versionar y fijar (*pin*) dependencias críticas de motores externos o binarios de terceros cuando se identifiquen regresiones. Especificar restricciones estrictas de versiones del entorno de ejecución (ej. campo `engines` en Node.js) alineadas con flujos de CI multiversión.
+*   **5.5. README Ilustrativo y Badges:** Cada `README.md` debe incluir: (a) badges de estado (CI, versión, licencia, cobertura), (b) al menos un diagrama de arquitectura o flujo (Mermaid renderizado como SVG/PNG), (c) capturas de pantalla o GIFs de la UI/CLI cuando aplique, y (d) sección "Estándares aplicados" con checklist visual.
+*   **5.6. Scaffolding Obligatorio:** Existe un script de arranque (`scripts/bootstrap-project.sh` o equivalente) que genera en cualquier repo nuevo: `README.md` plantilla, `CHANGELOG.md` (Keep a Changelog), `pyproject.toml`/`package.json` con `version = "0.1.0"`, `.gitignore`, `Dockerfile`, `.github/workflows/ci.yml`, `.env.example`, y `config.yaml` (SSoT). Su uso es obligatorio al crear un repositorio.
+*   **5.7. Auditoría Periódica Automatizada:** Un job programado (GitHub Actions `schedule` mensual o cron externo) ejecuta `scripts/audit-standards.py` que valida: presencia de versión SemVer, CHANGELOG, README con imágenes, `.gitignore`, Dockerfile, CI, y cumplimiento de RULES.md §1‑4. Genera reporte en `AUDIT_REPORT.md` y abre issue si hay regresiones.

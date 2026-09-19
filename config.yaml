@@ -1,0 +1,52 @@
+# Configuración centralizada (Single Source of Truth)
+models:
+  primary: "model-primary"
+  fallback_chain:
+    - "model-primary"
+    - "model-fallback-1"
+    - "model-fallback-2"
+
+generation:
+  default_duration_seconds: 30
+  temperature: 0.8
+
+retry:
+  max_attempts: 3
+  base_delay_seconds: 1.0
+  max_delay_seconds: 30.0
+  exponential_base: 2.0
+  jitter: true
+  retryable_status_codes: [408, 429, 500, 502, 503, 504]
+  non_retryable_status_codes: [401, 403, 404]
+
+concurrency:
+  max_parallel: 4
+
+cache:
+  lru_max_size: 1000
+  ttl_seconds: 3600
+  redis_url: "redis://localhost:6379/0"
+  enable_redis: false
+
+database:
+  path: "data/app.db"
+  busy_timeout_ms: 30000
+  enable_wal: true
+
+observability:
+  status_file: "data/status.json"
+  progress_interval_seconds: 5
+  log_level: "INFO"
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  handle_eaddrinuse: true
+  max_port_retries: 10
+
+error_codes:
+  AUTH: 401
+  RATE_LIMIT: 429
+  NOT_FOUND: 404
+  TIMEOUT: 408
+  SERVER_ERROR: [500, 502, 503, 504]
