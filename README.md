@@ -84,6 +84,12 @@ La configuración central vive en `config.yaml` (Single Source of Truth).
 | ✅ CI/CD GitHub Actions | ✅ |
 | ✅ .env.example | ✅ |
 
+## Documentación
+
+- [RULES.md](RULES.md) — estándares de arquitectura, resiliencia y versionado
+- [Estándares de código](docs/code-standards.md)
+- [Convenciones de commits](docs/commit-conventions.md)
+
 ## Licencia
 
 MIT — ver `LICENSE`.
