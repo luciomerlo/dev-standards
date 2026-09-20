@@ -187,7 +187,7 @@ MIT — ver \`LICENSE\`.
 EOF
 
 # 3) CHANGELOG.md (Keep a Changelog)
-cat > CHANGELOG.md <<'EOF'
+cat > CHANGELOG.md <<EOF
 # Changelog
 
 All notable changes to this project will be documented in this file.

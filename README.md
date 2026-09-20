@@ -1,94 +1,78 @@
-# DeepSeek-V2
+# dev-standards
 
-Proyecto DeepSeek-V2
+Estándares de ingeniería, scaffolding y auditoría automatizada para el ecosistema de proyectos de luciomerlo.
 
-<!-- Badges — actualiza los enlaces a tu repo real -->
-![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)
-![Version](https://img.shields.io/github/v/release/OWNER/REPO?label=version)
-![License](https://img.shields.io/github/license/OWNER/REPO)
-![Coverage](https://img.shields.io/codecov/c/github/OWNER/REPO)
+![CI](https://github.com/luciomerlo/dev-standards/actions/workflows/ci.yml/badge.svg)
+![Version](https://img.shields.io/github/v/release/luciomerlo/dev-standards?label=version)
+![License](https://img.shields.io/github/license/luciomerlo/dev-standards)
 
 ## Arquitectura
 
 ```mermaid
 graph TD
-  A[Config.yaml (SSoT)] --> B[Generator / Core]
-  B --> C[Async Pipeline + Retry/Backoff]
-  C --> D[Fallback Chain Multi-Model]
-  D --> E[Streaming Output]
-  E --> F[Progress + status.json]
-  F --> G[Observabilidad]
+  A[RULES.md] --> B[bootstrap-project.sh]
+  B --> C[Repo nuevo: README, CHANGELOG, CI, wiki/, check-secrets.py]
+  A --> D[audit-standards.py]
+  D --> E[Escanea repos existentes]
+  E --> F[AUDIT_REPORT.md + score 0-100]
+  A --> G[check-secrets.py]
+  G --> H[pre-commit hook + CI secret-scan]
 ```
 
+## Qué contiene este repo
 
-## Instalación
-
-```bash
-# Python
-pip install -e .
-
-# Node
-npm ci
-
-# Go
-go build ./...
-
-# Rust
-cargo build --release
-```
+| Archivo / carpeta | Rol |
+|---|---|
+| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, seguridad de secretos (§6) |
+| [`docs/code-standards.md`](docs/code-standards.md) | Nomenclatura, formato, testing, checklist de revisión |
+| [`docs/commit-conventions.md`](docs/commit-conventions.md) | Convenciones de commits |
+| `scripts/bootstrap-project.sh` | Genera el scaffolding completo en un repo nuevo (README, CHANGELOG, CI, `.gitignore`, Dockerfile, `wiki/`, guardarraíl de secretos) |
+| `scripts/audit-standards.py` | Audita repos existentes contra RULES.md y genera `AUDIT_REPORT.md` con score 0-100 |
+| `scripts/check-secrets.py` | Bloquea commits/CI con credenciales hardcodeadas (RULES.md §6) |
+| [`wiki/`](wiki/Home.md) | Wiki operativa de este propio repo (onboarding, arquitectura, runbook) |
 
 ## Uso rápido
 
+Scaffolding de un repo nuevo:
+
 ```bash
-# Python
-python -m DeepSeek-V2 --help
+bash scripts/bootstrap-project.sh --lang python --name "MiProyecto" --desc "Descripción breve"
+```
 
-# Node
-npx DeepSeek-V2 --help
+Auditar todos los proyectos bajo un directorio:
 
-# Go
-./DeepSeek-V2 --help
+```bash
+python scripts/audit-standards.py --root /ruta/a/Projects --fail-on-regression
+```
 
-# Rust
-cargo run -- --help
+Escanear secretos hardcodeados (usado por el pre-commit hook y el CI):
+
+```bash
+python scripts/check-secrets.py --tree      # árbol versionado
+python scripts/check-secrets.py --history   # historial completo
 ```
 
 ## Configuración
 
-Copie `.env.example` a `.env` y ajuste las variables:
-
-```bash
-cp .env.example .env
-```
-
-La configuración central vive en `config.yaml` (Single Source of Truth).
+Copie `.env.example` a `.env` si va a correr los scripts con credenciales (ej. tokens de GitHub para automatizar el scaffolding).
 
 ## Estándares aplicados (checklist visual)
 
 | Estándar (RULES.md) | Estado |
-|---------------------|--------|
-| ✅ SSoT (`config.yaml`) | ✅ |
-| ✅ Retry / Backoff exponencial | ✅ |
-| ✅ Cadena fallback multi-modelo | ✅ |
-| ✅ Async / no-bloqueante | ✅ |
-| ✅ Progreso + `status.json` | ✅ |
-| ✅ Clasificación errores (Auth, RateLimit, ...) | ✅ |
-| ✅ Caché LRU + TTL (+Redis opcional) | ✅ |
-| ✅ Streaming / Zero-disk I/O | ✅ |
-| ✅ Control puertos (EADDRINUSE) | ✅ |
-| ✅ Robustez BD (busy_timeout, WAL, migraciones) | ✅ |
-| ✅ SemVer en manifiesto | ✅ |
-| ✅ CHANGELOG (Keep a Changelog) | ✅ |
-| ✅ .gitignore | ✅ |
-| ✅ Dockerfile multi-stage | ✅ |
-| ✅ CI/CD GitHub Actions | ✅ |
-| ✅ .env.example | ✅ |
-| ✅ Wiki (`wiki/`, RULES.md §5.9) | ✅ |
+|---|---|
+| SemVer en manifiesto (`pyproject.toml`) | ✅ |
+| CHANGELOG (Keep a Changelog) | ✅ |
+| `.gitignore` | ✅ |
+| Dockerfile | ✅ |
+| CI/CD GitHub Actions | ✅ |
+| `.env.example` | ✅ |
+| Wiki (`wiki/`, §5.9) | ✅ |
+| Escaneo de secretos (§6) | ✅ |
 
 ## Documentación
 
-- [Wiki](wiki/Home.md) — onboarding, arquitectura y runbook (RULES.md §5.9)
-- [RULES.md](RULES.md) — estándares de arquitectura, resiliencia y versionado
+- [Wiki](wiki/Home.md) — onboarding, arquitectura y runbook
+- [RULES.md](RULES.md) — estándares de arquitectura, resiliencia, versionado y seguridad
 - [Estándares de código](docs/code-standards.md)
 - [Convenciones de commits](docs/commit-conventions.md)
 

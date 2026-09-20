@@ -38,4 +38,3 @@ El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` 
 | Score 100 con CHANGELOG en rojo | El check exige `## [x.y.z] - YYYY-MM-DD`; el placeholder `$(date ...)` del scaffold no cuenta |
 | Wiki en rojo | Falta `wiki/` o alguna página mínima está vacía / sin `#` heading |
 | Regresión masiva al añadir un check | Esperado: la línea base se recalcula al correr el auditor; la primera corrida con `--fail-on-regression` fallará hasta que los repos adopten la regla |
-| Nombre DeepSeek-V2 en README/paquete | Residuo del scaffold original; no forma parte de las directivas |
