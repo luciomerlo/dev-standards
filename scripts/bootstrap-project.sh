@@ -174,6 +174,12 @@ La configuración central vive en \`config.yaml\` (Single Source of Truth).
 | ✅ Dockerfile multi-stage | ✅ |
 | ✅ CI/CD GitHub Actions | ✅ |
 | ✅ .env.example | ✅ |
+| ✅ Wiki (\`wiki/\`, RULES.md §5.9) | ✅ |
+
+## Documentación
+
+- [Wiki](wiki/Home.md) — onboarding, arquitectura, runbook (RULES.md §5.9)
+- [CHANGELOG](CHANGELOG.md)
 
 ## Licencia
 
@@ -619,7 +625,146 @@ error_codes:
   SERVER_ERROR: [500, 502, 503, 504]
 EOF
 
-# 9) LICENSE
+# 9) Wiki del repositorio (RULES.md §5.9)
+mkdir -p wiki
+cat > wiki/Home.md <<EOF
+# $PROJECT_NAME
+
+$PROJECT_DESC
+
+Esta Wiki es el conocimiento operativo vivo del repositorio (RULES.md §5.9).
+El [README](../README.md) es la puerta de entrada; aquí vive onboarding, arquitectura, operación y troubleshooting.
+
+## Mapa de páginas
+
+| Página | Contenido |
+|--------|-----------|
+| [Architecture](Architecture.md) | Diseño, flujo de datos y decisiones |
+| [Getting Started](Getting-Started.md) | Setup local y primer uso |
+| [Operations](Operations.md) | Runbook, entorno, deploy y fallos |
+
+Actualizar estas páginas en el **mismo cambio** que altere propósito, arquitectura, uso u operación.
+EOF
+
+cat > wiki/Architecture.md <<EOF
+# Architecture — $PROJECT_NAME
+
+## Propósito
+
+$PROJECT_DESC
+
+## Vista general
+
+\`\`\`mermaid
+graph TD
+  A[config.yaml SSoT] --> B[Core]
+  B --> C[Async Pipeline + Retry/Backoff]
+  C --> D[Fallback Chain]
+  D --> E[Streaming Output]
+  E --> F[status.json]
+  F --> G[Observabilidad]
+\`\`\`
+
+## Fuente de verdad
+
+- Configuración de dominio: \`config.yaml\`
+- Directivas de ingeniería: RULES.md del ecosistema dev-standards
+- Esta página se actualiza cuando cambia el diseño o el flujo de datos
+
+## Decisiones
+
+Documentar aquí las decisiones que no caben en el README (por qué este stack, por qué este límite, qué se descartó).
+EOF
+
+cat > wiki/Getting-Started.md <<EOF
+# Getting Started — $PROJECT_NAME
+
+## Requisitos
+
+- Lenguaje: $LANG
+- Copiar \`.env.example\` a \`.env\` y completar secretos
+- Revisar \`config.yaml\` (Single Source of Truth)
+
+## Setup
+
+\`\`\`bash
+# Python
+pip install -e ".[dev]"
+
+# Node
+npm ci
+
+# Go
+go build ./...
+
+# Rust
+cargo build --release
+\`\`\`
+
+## Primer uso
+
+\`\`\`bash
+# Python
+python -m $PROJECT_NAME --help
+
+# Node
+npx $PROJECT_NAME --help
+
+# Go
+./$PROJECT_NAME --help
+
+# Rust
+cargo run -- --help
+\`\`\`
+
+## Contribuir
+
+Commits según Conventional Commits. Un PR por cambio lógico. Si el cambio altera uso o arquitectura, actualizar esta Wiki en el mismo PR.
+EOF
+
+cat > wiki/Operations.md <<EOF
+# Operations — $PROJECT_NAME
+
+## Entorno
+
+| Variable / archivo | Rol |
+|--------------------|-----|
+| \`.env\` | Secretos locales (no versionar) |
+| \`.env.example\` | Plantilla de variables |
+| \`config.yaml\` | Configuración de dominio (SSoT) |
+| \`data/status.json\` | Progreso de procesos largos |
+
+## Runbook
+
+1. Health: endpoint \`/health\` o comando de diagnóstico del binario.
+2. Logs: nivel \`LOG_LEVEL\` (default INFO), JSON en producción.
+3. Reintentos: backoff exponencial ante 429/5xx; no reintentar 401/403/404.
+4. Puerto ocupado (\`EADDRINUSE\`): el proceso debe salir con código 1.
+
+## Deploy
+
+Imagen multi-stage vía \`Dockerfile\`. CI en \`.github/workflows/ci.yml\` (lint, test, build).
+
+## Troubleshooting
+
+| Síntoma | Qué revisar |
+|---------|-------------|
+| Arranque bloqueado | Tareas pesadas deben ser async (§3.2) |
+| Rate limit | Cadena de fallback y headers 429 (§2.1–2.2) |
+| Proceso interrumpido | Reanudar desde \`status.json\` (§4.3) |
+| Drift de config | Un solo \`config.yaml\`, no copias (§1.1) |
+EOF
+
+cat > wiki/_Sidebar.md <<EOF
+* [Home](Home)
+* [Architecture](Architecture)
+* [Getting Started](Getting-Started)
+* [Operations](Operations)
+* [README](../README.md)
+* [CHANGELOG](../CHANGELOG.md)
+EOF
+
+# 10) LICENSE
 cat > LICENSE <<'EOF'
 MIT License
 
@@ -646,6 +791,7 @@ EOF
 
 echo "✅  Scaffold completado en $REPO_ROOT"
 echo "   → Edita README.md (badges, diagrama, capturas)"
+echo "   → Rellena wiki/ (Home, Architecture, Getting-Started, Operations)"
 echo "   → Revisa config.yaml y .env.example"
 echo "   → Añade tests en tests/ y código en src/"
 echo "   → Haz commit y push; CI se activará automáticamente"

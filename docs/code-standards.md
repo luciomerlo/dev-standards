@@ -39,6 +39,7 @@ Nombres descriptivos y pronunciables. Evitar abreviaturas ambiguas (`usr`, `tmp2
 - Código autoexplicativo por naming; comentarios solo para el **porqué**, no el qué.
 - Sin bloques de documentación multi-línea salvo en APIs públicas de librerías.
 - README por módulo solo si el módulo se consume fuera del equipo.
+- Onboarding, arquitectura, runbook y troubleshooting viven en `wiki/` (RULES.md §5.9), no en comentarios ni en READMEs de módulo.
 
 ## 6. Testing
 

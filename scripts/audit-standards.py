@@ -10,6 +10,7 @@ y valida la presencia de:
   - Versión SemVer en manifiesto (package.json, pyproject.toml, Cargo.toml, go.mod, setup.py)
   - CHANGELOG.md (formato Keep a Changelog)
   - README.md con al menos una imagen (![...](...))
+  - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
   - .gitignore
   - Dockerfile
   - CI (.github/workflows/*.yml)
@@ -38,6 +39,7 @@ class ProjectAudit:
     has_semver: bool
     has_changelog: bool
     readme_has_images: bool
+    has_wiki: bool
     has_gitignore: bool
     has_dockerfile: bool
     has_ci: bool
@@ -115,6 +117,25 @@ def check_readme_images(project_path: Path) -> bool:
     txt = p.read_text(encoding="utf-8", errors="ignore")
     return bool(re.search(r"!\[.*\]\(.*\)", txt))
 
+REQUIRED_WIKI_PAGES = ("Home.md", "Architecture.md", "Getting-Started.md", "Operations.md")
+WIKI_MIN_CHARS = 80
+
+def check_wiki(project_path: Path) -> bool:
+    """Verifica wiki/ con las páginas mínimas de RULES.md §5.9, rellenas (no stubs)."""
+    wiki = project_path / "wiki"
+    if not wiki.is_dir():
+        return False
+    for name in REQUIRED_WIKI_PAGES:
+        p = wiki / name
+        if not p.is_file():
+            return False
+        txt = p.read_text(encoding="utf-8", errors="ignore").strip()
+        if len(txt) < WIKI_MIN_CHARS:
+            return False
+        if not re.search(r"^#\s+\S", txt, re.MULTILINE):
+            return False
+    return True
+
 def check_file_exists(project_path: Path, name: str) -> bool:
     return (project_path / name).exists()
 
@@ -169,6 +190,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
     has_semver = check_semver(project_path, lang)
     has_changelog = check_changelog(project_path)
     readme_has_images = check_readme_images(project_path)
+    has_wiki = check_wiki(project_path)
     has_gitignore = check_file_exists(project_path, ".gitignore")
     has_dockerfile = check_file_exists(project_path, "Dockerfile")
     has_ci = check_ci(project_path)
@@ -180,8 +202,9 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_semver": 10,
         "has_changelog": 10,
         "readme_has_images": 5,
+        "has_wiki": 5,
         "has_gitignore": 5,
-        "has_dockerfile": 10,
+        "has_dockerfile": 5,
         "has_ci": 10,
         "has_env_example": 5,
         "has_config_yaml": 10,
@@ -199,6 +222,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_semver": has_semver,
         "has_changelog": has_changelog,
         "readme_has_images": readme_has_images,
+        "has_wiki": has_wiki,
         "has_gitignore": has_gitignore,
         "has_dockerfile": has_dockerfile,
         "has_ci": has_ci,
@@ -214,6 +238,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_semver=has_semver,
         has_changelog=has_changelog,
         readme_has_images=readme_has_images,
+        has_wiki=has_wiki,
         has_gitignore=has_gitignore,
         has_dockerfile=has_dockerfile,
         has_ci=has_ci,
@@ -254,6 +279,7 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("SemVer", a.has_semver),
             ("CHANGELOG", a.has_changelog),
             ("README c/ imágenes", a.readme_has_images),
+            ("Wiki (wiki/ §5.9)", a.has_wiki),
             (".gitignore", a.has_gitignore),
             ("Dockerfile", a.has_dockerfile),
             ("CI/CD", a.has_ci),

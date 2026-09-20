@@ -8,8 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial scaffold via dev-standards bootstrap script
-- Standard project structure with all required files
+- RULES.md §5.9: every repository must keep a filled, up-to-date Wiki in `wiki/`
+- Wiki check in `scripts/audit-standards.py` and `wiki/` scaffold in `scripts/bootstrap-project.sh`
+- This repository's Wiki: `wiki/Home.md`, `Architecture.md`, `Getting-Started.md`, `Operations.md`
+
+### Changed
+- RULES.md §5.6 and §5.7 now include the Wiki as a bootstrap and audit requirement
 
 ## [0.1.0] - $(date +%Y-%m-%d)
 
