@@ -15,6 +15,18 @@ env:
   RUST_VERSION: "stable"
 
 jobs:
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan tracked files for hardcoded secrets
+        run: python3 scripts/check-secrets.py --tree
+      - name: Scan full history for hardcoded secrets
+        run: python3 scripts/check-secrets.py --history
+
   lint-and-typecheck:
     name: Lint & Type Check
     runs-on: ubuntu-latest

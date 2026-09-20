@@ -465,6 +465,18 @@ env:
   RUST_VERSION: "stable"
 
 jobs:
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan tracked files for hardcoded secrets
+        run: python3 scripts/check-secrets.py --tree
+      - name: Scan full history for hardcoded secrets
+        run: python3 scripts/check-secrets.py --history
+
   lint-and-typecheck:
     name: Lint & Type Check
     runs-on: ubuntu-latest
@@ -625,7 +637,24 @@ error_codes:
   SERVER_ERROR: [500, 502, 503, 504]
 EOF
 
-# 9) Wiki del repositorio (RULES.md §5.9)
+# 9) Escaneo de secretos: pre-commit + script (RULES.md §6)
+mkdir -p scripts
+cp "$(dirname "${BASH_SOURCE[0]}")/check-secrets.py" scripts/check-secrets.py 2>/dev/null || \
+  curl -fsSL https://raw.githubusercontent.com/luciomerlo/dev-standards/main/scripts/check-secrets.py -o scripts/check-secrets.py
+
+cat > .pre-commit-config.yaml <<'EOF'
+repos:
+  - repo: local
+    hooks:
+      - id: check-secrets
+        name: Bloquear secretos hardcodeados (RULES.md §6.1)
+        entry: python3 scripts/check-secrets.py
+        language: system
+        pass_filenames: false
+        always_run: true
+EOF
+
+# 9b) Wiki del repositorio (RULES.md §5.9)
 mkdir -p wiki
 cat > wiki/Home.md <<EOF
 # $PROJECT_NAME

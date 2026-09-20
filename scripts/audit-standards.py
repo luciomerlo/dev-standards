@@ -45,6 +45,7 @@ class ProjectAudit:
     has_ci: bool
     has_env_example: bool
     has_config_yaml: bool
+    has_secret_scan: bool
     # RULES §1-4 checks
     has_retry_backoff: bool
     has_fallback_chain: bool
@@ -145,6 +146,23 @@ def check_ci(project_path: Path) -> bool:
         return False
     return any(wf.glob("*.yml")) or any(wf.glob("*.yaml"))
 
+def check_secret_scan(project_path: Path) -> bool:
+    """Verifica guardarraíl de secretos: script + pre-commit + job en CI (RULES.md §6.2)."""
+    if not (project_path / "scripts" / "check-secrets.py").exists():
+        return False
+    if not (project_path / ".pre-commit-config.yaml").exists():
+        return False
+    wf = project_path / ".github" / "workflows"
+    if not wf.exists():
+        return False
+    for f in list(wf.glob("*.yml")) + list(wf.glob("*.yaml")):
+        try:
+            if "check-secrets.py" in f.read_text(encoding="utf-8", errors="ignore"):
+                return True
+        except Exception:
+            continue
+    return False
+
 def scan_code_patterns(project_path: Path) -> Dict[str, bool]:
     """Escanea patrones de código para RULES §1-4 (optimizado)."""
     patterns = {
@@ -196,6 +214,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
     has_ci = check_ci(project_path)
     has_env_example = check_file_exists(project_path, ".env.example")
     has_config_yaml = check_file_exists(project_path, "config.yaml")
+    has_secret_scan = check_secret_scan(project_path)
 
     # Score ponderado
     weights = {
@@ -208,6 +227,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_ci": 10,
         "has_env_example": 5,
         "has_config_yaml": 10,
+        "has_secret_scan": 10,
         "has_retry_backoff": 5,
         "has_fallback_chain": 5,
         "has_async": 5,
@@ -228,6 +248,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_ci": has_ci,
         "has_env_example": has_env_example,
         "has_config_yaml": has_config_yaml,
+        "has_secret_scan": has_secret_scan,
         **code_patterns,
     }
     score = sum(w for k, w in weights.items() if checks.get(k, False))
@@ -244,6 +265,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_ci=has_ci,
         has_env_example=has_env_example,
         has_config_yaml=has_config_yaml,
+        has_secret_scan=has_secret_scan,
         has_retry_backoff=code_patterns["has_retry_backoff"],
         has_fallback_chain=code_patterns["has_fallback_chain"],
         has_async=code_patterns["has_async"],
@@ -285,6 +307,7 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("CI/CD", a.has_ci),
             (".env.example", a.has_env_example),
             ("config.yaml (SSoT)", a.has_config_yaml),
+            ("Escaneo de secretos (RULES.md §6)", a.has_secret_scan),
             ("Retry/Backoff", a.has_retry_backoff),
             ("Fallback chain", a.has_fallback_chain),
             ("Async/No-bloqueante", a.has_async),

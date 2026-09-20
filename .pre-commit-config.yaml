@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: check-secrets
+        name: Bloquear secretos hardcodeados (RULES.md §6.1)
+        entry: python3 scripts/check-secrets.py
+        language: system
+        pass_filenames: false
+        always_run: true
