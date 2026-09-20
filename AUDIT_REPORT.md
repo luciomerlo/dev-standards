@@ -1,33 +1,9 @@
 # REPORTE DE AUDITORÍA AUTOMATIZADA - 2026-09-17 22:07
 
-Total proyectos auditados: 56
-Promedio score: 41.6/100
+Total proyectos auditados: 55
+Promedio score: 40.5/100
 
----
-
-## ✅ DeepSeek-V2 — Score: 100/100
-- **Ruta**: `D:\Projects\DeepSeek-V2`
-- **Lenguaje**: python
-
-| Check | Estado |
-|-------|--------|
-| SemVer | ✅ |
-| CHANGELOG | ❌ |
-| README c/ imágenes | ✅ |
-| .gitignore | ✅ |
-| Dockerfile | ✅ |
-| CI/CD | ✅ |
-| .env.example | ✅ |
-| config.yaml (SSoT) | ✅ |
-| Retry/Backoff | ✅ |
-| Fallback chain | ✅ |
-| Async/No-bloqueante | ✅ |
-| Progreso/status.json | ✅ |
-| Clasificación errores | ✅ |
-| Caché | ✅ |
-| Streaming/Zero-disk | ✅ |
-| Control puertos | ✅ |
-| Robustez BD | ✅ |
+_Nota: entrada `DeepSeek-V2` purgada — era el scaffold de ejemplo generado dentro de `dev-standards`, no un proyecto independiente._
 
 ---
 
