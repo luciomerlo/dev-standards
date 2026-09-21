@@ -5,9 +5,14 @@ Backends soportados (ninguno reemplaza permanentemente a `local`):
   local            GPU/CPU de la máquina donde corre el proceso.
   colab            Genera/actualiza un notebook companion; flujo ASISTIDO,
                    no una invocación remota automática (Colab no expone esa API).
-  cloud-api        Llama a un servicio gestionado (ej. Replicate) vía API key.
+  cloud-api        Llama a un servicio gestionado (ej. Replicate, Groq) vía API key.
   cloud-serverless Invoca un contenedor propio en una plataforma serverless GPU
                    (ej. RunPod) para modelos/checkpoints custom.
+  modal            Invoca una función Python ya deployada en Modal
+                   (modal.com, ~$30 USD de crédito gratis por mes) vía
+                   `modal.Function.lookup(...).remote(...)`. Automático, sin
+                   contenedor propio que mantener -- Modal empaqueta la
+                   función decorada directamente.
 
 Uso típico en un proyecto:
 
@@ -29,20 +34,20 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-BACKENDS = ("local", "colab", "cloud-api", "cloud-serverless")
+BACKENDS = ("local", "colab", "cloud-api", "cloud-serverless", "modal")
 
 # Cada proyecto declara su propio subconjunto según su carga de trabajo
-# (RULES.md §7.2). No todos los proyectos ofrecen los 4 backends:
+# (RULES.md §7.2). No todos los proyectos ofrecen los 5 backends:
 #   - Carga pesada con checkpoints/modelos custom (demucs entrenado, MusicGen):
-#     local + cloud-serverless + colab (colab es la última prioridad, pero
-#     debe existir). No se ofrece cloud-api: no hay endpoint gestionado para
-#     un checkpoint propio.
+#     local + cloud-serverless + modal + colab (colab es la última
+#     prioridad, pero debe existir). No se ofrece cloud-api: no hay endpoint
+#     gestionado para un checkpoint propio.
 #   - Carga moderada con modelos estándar hospedados en algún proveedor
 #     (whisper/faster-whisper, clasificadores): local + cloud-api +
-#     cloud-serverless. No se ofrece colab: la llamada a un API gestionado
-#     ya es más simple que un notebook manual.
-HEAVY_BACKENDS = ("local", "cloud-serverless", "colab")
-MODERATE_BACKENDS = ("local", "cloud-api", "cloud-serverless")
+#     cloud-serverless + modal. No se ofrece colab: la llamada a un API
+#     gestionado ya es más simple que un notebook manual.
+HEAVY_BACKENDS = ("local", "cloud-serverless", "modal", "colab")
+MODERATE_BACKENDS = ("local", "cloud-api", "cloud-serverless", "modal")
 
 
 def detect_cuda() -> bool:

@@ -14,14 +14,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RULES.md §6 (Seguridad y Gestión de Secretos): `scripts/check-secrets.py`, pre-commit hook, and
   CI `secret-scan` job, generated automatically by `bootstrap-project.sh` for every new repo
 - RULES.md §7 (Cómputo Local vs. Cómputo Web): standard for GPU/CUDA runtime detection with
-  four selectable backends (`local`, `colab`, `cloud-api`, `cloud-serverless`) that never remove
-  `local` as an option. Reference implementation:
+  five selectable backends (`local`, `colab`, `cloud-api`, `cloud-serverless`, `modal`) that never
+  remove `local` as an option. Reference implementation:
   - `scripts/gpu_compute.py` — `detect_cuda()`, `resolve_backend()`, `cuda_status_tag()`
     (green "Local GPU CUDA available" tag for dashboards), `HEAVY_BACKENDS`/`MODERATE_BACKENDS`
     per-project backend subsets
   - `scripts/make_colab_notebook.py` — generates the `colab` companion notebook (assisted
     flow: Colab has no public API for transparent remote invocation)
   - `scripts/run_on_runpod.py` — `cloud-serverless` client (RunPod Serverless REST API)
+  - `scripts/run_on_modal.py` — `modal` client (`call_modal_function()`, Modal's Python-native
+    remote-function lookup/call; ~$30 USD/month free credit, must be mentioned in any README
+    that offers this backend)
   - `scripts/transcribe_via_groq.py` — `cloud-api` client for Whisper-based projects (Groq)
   - `scripts/run_on_hf_inference.py` — `cloud-api` client for other hosted models (HF Inference API)
 
