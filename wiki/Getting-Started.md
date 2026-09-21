@@ -35,6 +35,12 @@ No hace falta re-bootstrap si el árbol ya tiene manifiesto, CI y README. Falta 
 1. Crear `wiki/Home.md`, `Architecture.md`, `Getting-Started.md` y `Operations.md` rellenos.
 2. Enlazar `wiki/Home.md` desde el README.
 3. Añadir la fila de Wiki al checklist de estándares del README.
+4. Copiar `scripts/check-secrets.py`, el hook de pre-commit y el job
+   `secret-scan` de CI (§6.2) — obligatorio en todo repositorio, tenga o
+   no carga GPU.
+5. Si el proyecto corre algo pesado en GPU localmente (`torch`, `demucs`,
+   `whisper`, `transformers`): copiar `scripts/gpu_compute.py` y sumar el
+   backend de cómputo web que corresponda a su tier — ver [Compute](Compute.md) (§7).
 
 ## Añadir o cambiar un estándar
 

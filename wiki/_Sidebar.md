@@ -2,6 +2,7 @@
 * [Architecture](Architecture)
 * [Getting Started](Getting-Started)
 * [Operations](Operations)
+* [Compute](Compute)
 * [RULES.md](../RULES.md)
 * [README](../README.md)
 * [CHANGELOG](../CHANGELOG.md)

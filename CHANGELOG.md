@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     that offers this backend)
   - `scripts/transcribe_via_groq.py` — `cloud-api` client for Whisper-based projects (Groq)
   - `scripts/run_on_hf_inference.py` — `cloud-api` client for other hosted models (HF Inference API)
+- New Wiki page `wiki/Compute.md` documenting RULES.md §7 in full (the 5 backends, which
+  subset each weight tier — red/yellow — is allowed, the diffusion-model exclusion, and the
+  adoption checklist); `Home.md`, `Architecture.md`, `Getting-Started.md`, `Operations.md` and
+  `_Sidebar.md` updated to reference §6/§7 and the new page
 
 ### Changed
 - RULES.md §5.6 and §5.7 now include the Wiki as a bootstrap and audit requirement

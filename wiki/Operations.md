@@ -18,6 +18,22 @@ Recorre cada subdirectorio de `--root` (ignora los que empiezan por `.`) y punt�
 
 El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` y `Operations.md`. Cada archivo debe tener un heading Markdown y al menos 80 caracteres de contenido real.
 
+### Check de escaneo de secretos (§6)
+
+`check_secret_scan()` verifica que exista `scripts/check-secrets.py` y que
+esté referenciado en el pipeline de CI (`.github/workflows/ci.yml`). No
+valida que el pre-commit hook esté instalado localmente — eso es
+responsabilidad de cada clon (`.pre-commit-config.yaml` + `pre-commit
+install`).
+
+### Cómputo (§7) — no auditado automáticamente
+
+A diferencia de Wiki y secretos, `audit-standards.py` **no** puntúa la
+adopción de backends de cómputo: es condicional a si el proyecto tiene
+carga GPU opcional, así que no aplica parejo a todo el ecosistema. La
+verificación es manual — ver [Compute](Compute.md) para el checklist de
+adopción y qué backend le toca a cada tier.
+
 ## CI
 
 `.github/workflows/ci.yml` corre lint/typecheck, tests con coverage, build de imagen y semantic-release en `main`. El job de auditoría periódica (schedule mensual, §5.7) es el que debe invocar `audit-standards.py` y abrir issue si hay regresiones.
