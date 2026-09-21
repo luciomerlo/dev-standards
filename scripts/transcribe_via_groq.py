@@ -55,14 +55,14 @@ def _multipart_body(fields: dict, file_field: str, file_path: Path) -> tuple:
     return body, f"multipart/form-data; boundary={boundary}"
 
 
-def transcribe(
+def _call_groq(
     audio_path: str,
     *,
-    model: str = DEFAULT_MODEL,
-    language: Optional[str] = None,
-    api_key: Optional[str] = None,
-) -> str:
-    """Transcribe `audio_path` vía la API de Groq. Devuelve el texto plano."""
+    model: str,
+    response_format: str,
+    language: Optional[str],
+    api_key: Optional[str],
+):
     api_key = api_key or os.environ.get("GROQ_API_KEY")
     if not api_key:
         raise GroqTranscriptionError(
@@ -73,7 +73,7 @@ def transcribe(
     if not path.exists():
         raise GroqTranscriptionError(f"No existe el archivo de audio: {audio_path}")
 
-    fields = {"model": model, "response_format": "text"}
+    fields = {"model": model, "response_format": response_format}
     if language:
         fields["language"] = language
     body, content_type = _multipart_body(fields, "file", path)
@@ -93,6 +93,32 @@ def transcribe(
         ) from e
     except urllib.error.URLError as e:
         raise GroqTranscriptionError(f"No se pudo contactar la API de Groq: {e}") from e
+
+
+def transcribe(
+    audio_path: str,
+    *,
+    model: str = DEFAULT_MODEL,
+    language: Optional[str] = None,
+    api_key: Optional[str] = None,
+) -> str:
+    """Transcribe `audio_path` vía la API de Groq. Devuelve el texto plano."""
+    return _call_groq(audio_path, model=model, response_format="text", language=language, api_key=api_key)
+
+
+def transcribe_verbose(
+    audio_path: str,
+    *,
+    model: str = DEFAULT_MODEL,
+    language: Optional[str] = None,
+    api_key: Optional[str] = None,
+) -> dict:
+    """Transcribe con `response_format=verbose_json`: devuelve un dict con
+    `segments` (cada uno con `start`/`end`/`text`, igual forma que la API de
+    OpenAI/faster-whisper), para pipelines que necesitan timestamps
+    (ej. chunking por segmento) en vez de solo el texto plano."""
+    raw = _call_groq(audio_path, model=model, response_format="verbose_json", language=language, api_key=api_key)
+    return json.loads(raw)
 
 
 def main() -> int:
