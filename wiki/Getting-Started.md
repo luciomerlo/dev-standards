@@ -19,7 +19,7 @@ bash /ruta/a/dev-standards/scripts/bootstrap-project.sh \
 
 `--lang` acepta `python`, `node`, `go` o `rust`. Sin `--name` usa el basename del directorio.
 
-El script genera README, CHANGELOG, manifiesto con `0.1.0`, `.gitignore`, Dockerfile, CI, `.env.example`, `config.yaml` y `wiki/` con las cuatro páginas mínimas (§5.9).
+El script genera README, CHANGELOG, manifiesto con `0.1.0`, `.gitignore`, Dockerfile, CI, `.env.example`, `config.yaml`, `wiki/` con las cuatro páginas mínimas (§5.9) y `contexto_proyecto.md` (§5.10).
 
 Después del scaffold:
 
@@ -27,6 +27,7 @@ Después del scaffold:
 2. Reescribir `wiki/` con el propósito real del proyecto (no dejar el texto genérico).
 3. Poner la descripción del hosting en inglés, ≤350 caracteres, alineada al README (§5.8).
 4. Añadir código en `src/` y tests en `tests/`.
+5. Regenerar `contexto_proyecto.md` (`python scripts/generate-contexto.py`) en el mismo cambio que toque código, configuración o documentación normativa (§5.10).
 
 ## Adoptar en un repo que ya existe
 
@@ -41,6 +42,9 @@ No hace falta re-bootstrap si el árbol ya tiene manifiesto, CI y README. Falta 
 5. Si el proyecto corre algo pesado en GPU localmente (`torch`, `demucs`,
    `whisper`, `transformers`): copiar `scripts/gpu_compute.py` y sumar el
    backend de cómputo web que corresponda a su tier — ver [Compute](Compute.md) (§7).
+6. Copiar `scripts/generate-contexto.py` y generar `contexto_proyecto.md`
+   (`python scripts/generate-contexto.py`). Regenerarlo cada vez que cambie
+   código, configuración o documentación normativa (§5.10).
 
 ## Añadir o cambiar un estándar
 

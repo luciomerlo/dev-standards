@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- RULES.md §5.10: every repository must keep an up-to-date `contexto_proyecto.md` at the
+  root (architecture summary plus the full text of relevant source, config, and normative
+  docs) so a later LLM can read the codebase without walking the tree. Reference generator:
+  `scripts/generate-contexto.py`, copied and run by `bootstrap-project.sh`. Audit check in
+  `scripts/audit-standards.py`. This repository's own `contexto_proyecto.md` is generated.
 - RULES.md §5.9: every repository must keep a filled, up-to-date Wiki in `wiki/`
 - Wiki check in `scripts/audit-standards.py` and `wiki/` scaffold in `scripts/bootstrap-project.sh`
 - This repository's Wiki: `wiki/Home.md`, `Architecture.md`, `Getting-Started.md`, `Operations.md`

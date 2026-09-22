@@ -52,5 +52,6 @@ Nombres descriptivos y pronunciables. Evitar abreviaturas ambiguas (`usr`, `tmp2
 - [ ] Compila / pasa linter y typecheck sin warnings.
 - [ ] Tests nuevos para el comportamiento agregado.
 - [ ] Sin secretos, credenciales o URLs internas hardcodeadas (verificado por `scripts/check-secrets.py`, RULES.md §6).
+- [ ] Si el cambio toca código, configuración o documentación normativa, `contexto_proyecto.md` fue regenerado (`python scripts/generate-contexto.py`, RULES.md §5.10).
 - [ ] Sin abstracciones o flags innecesarios para el alcance del cambio.
 - [ ] Commits siguen `docs/commit-conventions.md`.

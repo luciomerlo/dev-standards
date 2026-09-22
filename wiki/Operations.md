@@ -18,6 +18,14 @@ Recorre cada subdirectorio de `--root` (ignora los que empiezan por `.`) y punt�
 
 El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` y `Operations.md`. Cada archivo debe tener un heading Markdown y al menos 80 caracteres de contenido real.
 
+### Check de contexto para LLM (§5.10)
+
+`check_contexto()` exige `contexto_proyecto.md` en la raíz, con los encabezados `# RESUMEN Y ARQUITECTURA` y `# ARCHIVOS DEL PROYECTO`, y al menos un apartado `## Ruta:`. El archivo lo produce `scripts/generate-contexto.py`; hay que volver a correrlo en el mismo cambio que altere código, configuración o documentación normativa.
+
+```bash
+python scripts/generate-contexto.py
+```
+
 ### Check de escaneo de secretos (§6)
 
 `check_secret_scan()` verifica que exista `scripts/check-secrets.py` y que
@@ -53,4 +61,5 @@ adopción y qué backend le toca a cada tier.
 |---------|-------------|
 | Score 100 con CHANGELOG en rojo | El check exige `## [x.y.z] - YYYY-MM-DD`; el placeholder `$(date ...)` del scaffold no cuenta |
 | Wiki en rojo | Falta `wiki/` o alguna página mínima está vacía / sin `#` heading |
+| contexto_proyecto.md en rojo | Falta el archivo o no tiene las dos secciones y un `## Ruta:` (§5.10). Regenerar con `python scripts/generate-contexto.py` |
 | Regresión masiva al añadir un check | Esperado: la línea base se recalcula al correr el auditor; la primera corrida con `--fail-on-regression` fallará hasta que los repos adopten la regla |

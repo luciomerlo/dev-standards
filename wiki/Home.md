@@ -12,6 +12,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | [docs/code-standards.md](../docs/code-standards.md) | Nomenclatura, lint, testing, review |
 | [docs/commit-conventions.md](../docs/commit-conventions.md) | Conventional Commits, branches, PRs |
 | `scripts/bootstrap-project.sh` | Scaffold obligatorio de un repo nuevo (§5.6) |
+| `scripts/generate-contexto.py` | Regenera `contexto_proyecto.md`, el volcado para un LLM (§5.10) |
 | `scripts/audit-standards.py` | Auditoría periódica de cumplimiento (§5.7) |
 | `scripts/check-secrets.py` | Escaneo de secretos, árbol + historial (§6.2) |
 | `scripts/gpu_compute.py` | Detección de CUDA, tag de estado, selección de backend (§7.1–§7.3) |
@@ -22,6 +23,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | `scripts/run_on_modal.py` | Cliente del backend `modal` (Modal, ~$30 USD/mes gratis) (§7.2) |
 | `config.yaml` | SSoT de configuración de dominio (§1.1) |
 | `wiki/` | Esta Wiki, versionada con el código (§5.9) |
+| `contexto_proyecto.md` | Resumen de arquitectura y contenido completo del código y la configuración (§5.10) |
 
 ## Mapa de páginas
 

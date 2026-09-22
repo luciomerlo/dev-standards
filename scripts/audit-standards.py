@@ -11,6 +11,7 @@ y valida la presencia de:
   - CHANGELOG.md (formato Keep a Changelog)
   - README.md con al menos una imagen (![...](...))
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
+  - contexto_proyecto.md con la estructura de RULES.md §5.10
   - .gitignore
   - Dockerfile
   - CI (.github/workflows/*.yml)
@@ -40,6 +41,7 @@ class ProjectAudit:
     has_changelog: bool
     readme_has_images: bool
     has_wiki: bool
+    has_contexto: bool
     has_gitignore: bool
     has_dockerfile: bool
     has_ci: bool
@@ -137,6 +139,19 @@ def check_wiki(project_path: Path) -> bool:
             return False
     return True
 
+def check_contexto(project_path: Path) -> bool:
+    """Verifica contexto_proyecto.md con la estructura de RULES.md §5.10."""
+    p = project_path / "contexto_proyecto.md"
+    if not p.is_file():
+        return False
+    txt = p.read_text(encoding="utf-8", errors="ignore")
+    if len(txt.strip()) < 200:
+        return False
+    has_summary = re.search(r"^# RESUMEN Y ARQUITECTURA\s*$", txt, re.MULTILINE)
+    has_files = re.search(r"^# ARCHIVOS DEL PROYECTO\s*$", txt, re.MULTILINE)
+    has_route = re.search(r"^## Ruta: `[^`]+`", txt, re.MULTILINE)
+    return bool(has_summary and has_files and has_route)
+
 def check_file_exists(project_path: Path, name: str) -> bool:
     return (project_path / name).exists()
 
@@ -209,6 +224,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
     has_changelog = check_changelog(project_path)
     readme_has_images = check_readme_images(project_path)
     has_wiki = check_wiki(project_path)
+    has_contexto = check_contexto(project_path)
     has_gitignore = check_file_exists(project_path, ".gitignore")
     has_dockerfile = check_file_exists(project_path, "Dockerfile")
     has_ci = check_ci(project_path)
@@ -222,6 +238,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_changelog": 10,
         "readme_has_images": 5,
         "has_wiki": 5,
+        "has_contexto": 5,
         "has_gitignore": 5,
         "has_dockerfile": 5,
         "has_ci": 10,
@@ -243,6 +260,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_changelog": has_changelog,
         "readme_has_images": readme_has_images,
         "has_wiki": has_wiki,
+        "has_contexto": has_contexto,
         "has_gitignore": has_gitignore,
         "has_dockerfile": has_dockerfile,
         "has_ci": has_ci,
@@ -260,6 +278,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_changelog=has_changelog,
         readme_has_images=readme_has_images,
         has_wiki=has_wiki,
+        has_contexto=has_contexto,
         has_gitignore=has_gitignore,
         has_dockerfile=has_dockerfile,
         has_ci=has_ci,
@@ -302,6 +321,7 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("CHANGELOG", a.has_changelog),
             ("README c/ imágenes", a.readme_has_images),
             ("Wiki (wiki/ §5.9)", a.has_wiki),
+            ("contexto_proyecto.md (§5.10)", a.has_contexto),
             (".gitignore", a.has_gitignore),
             ("Dockerfile", a.has_dockerfile),
             ("CI/CD", a.has_ci),

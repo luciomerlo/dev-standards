@@ -175,10 +175,12 @@ La configuración central vive en \`config.yaml\` (Single Source of Truth).
 | ✅ CI/CD GitHub Actions | ✅ |
 | ✅ .env.example | ✅ |
 | ✅ Wiki (\`wiki/\`, RULES.md §5.9) | ✅ |
+| ✅ Contexto LLM (\`contexto_proyecto.md\`, §5.10) | ✅ |
 
 ## Documentación
 
 - [Wiki](wiki/Home.md) — onboarding, arquitectura, runbook (RULES.md §5.9)
+- [Contexto para LLM](contexto_proyecto.md) — base de código consolidada (RULES.md §5.10)
 - [CHANGELOG](CHANGELOG.md)
 
 ## Licencia
@@ -818,9 +820,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 EOF
 
+# 11) contexto_proyecto.md (RULES.md §5.10)
+cp "$(dirname "${BASH_SOURCE[0]}")/generate-contexto.py" scripts/generate-contexto.py 2>/dev/null || \
+  curl -fsSL https://raw.githubusercontent.com/luciomerlo/dev-standards/main/scripts/generate-contexto.py -o scripts/generate-contexto.py
+
+if command -v python3 >/dev/null 2>&1; then
+  python3 scripts/generate-contexto.py --root "$REPO_ROOT"
+elif command -v python >/dev/null 2>&1; then
+  python scripts/generate-contexto.py --root "$REPO_ROOT"
+else
+  echo "⚠️  Python no disponible: ejecuta luego python scripts/generate-contexto.py"
+fi
+
 echo "✅  Scaffold completado en $REPO_ROOT"
 echo "   → Edita README.md (badges, diagrama, capturas)"
 echo "   → Rellena wiki/ (Home, Architecture, Getting-Started, Operations)"
+echo "   → Regenera contexto_proyecto.md si cambia código o configuración (python scripts/generate-contexto.py)"
 echo "   → Revisa config.yaml y .env.example"
 echo "   → Añade tests en tests/ y código en src/"
 echo "   → Haz commit y push; CI se activará automáticamente"
