@@ -16,7 +16,9 @@ Recorre cada subdirectorio de `--root` (ignora los que empiezan por `.`) y punt�
 
 ### Check de descripción (§5.8)
 
-`check_description()` exige un campo `description` no vacío de 350 caracteres como máximo en `package.json`, `pyproject.toml` o `Cargo.toml`. El bootstrap rechaza un `--desc` más largo. El campo "description" del hosting (GitHub) no se consulta: se mantiene manualmente alineado con el manifiesto y el README.
+`check_description()` obtiene `owner/repo` del remote `origin` y lee el campo "description" del repositorio en la API de GitHub (`GET /repos/{owner}/{repo}`). Aprueba si no está vacío y tiene 350 caracteres como máximo. Usa `GITHUB_TOKEN` o `GH_TOKEN` si están definidos (necesario para repos privados y para evitar el rate limit de 60 req/h). Sin remote de GitHub o sin respuesta de la API, el check falla y lo avisa por consola.
+
+`bootstrap-project.sh` rechaza un `--desc` de más de 350 caracteres y, si `gh` está disponible y el remote es de GitHub, lo aplica con `gh repo edit --description`. El idioma (inglés) no se valida automáticamente.
 
 ### Check de Wiki (§5.9)
 

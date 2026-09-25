@@ -10,7 +10,7 @@ y valida la presencia de:
   - Versión SemVer en manifiesto (package.json, pyproject.toml, Cargo.toml, go.mod, setup.py)
   - CHANGELOG.md (formato Keep a Changelog)
   - README.md con al menos una imagen (![...](...))
-  - Descripción no vacía de ≤350 caracteres en el manifiesto (RULES.md §5.8)
+  - Descripción del repo en GitHub no vacía y de ≤350 caracteres (RULES.md §5.8)
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
   - contexto_proyecto.md con la estructura de RULES.md §5.10
   - .gitignore
@@ -123,25 +123,50 @@ def check_readme_images(project_path: Path) -> bool:
     return bool(re.search(r"!\[.*\]\(.*\)", txt))
 
 DESCRIPTION_MAX_CHARS = 350
+GITHUB_REMOTE_RE = re.compile(r"github\.com[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
+
+def github_slug(project_path: Path) -> Optional[str]:
+    """Devuelve 'owner/repo' a partir del remote origin, o None si no apunta a GitHub."""
+    try:
+        url = subprocess.run(
+            ["git", "-C", str(project_path), "remote", "get-url", "origin"],
+            capture_output=True, text=True, timeout=10,
+        ).stdout.strip()
+    except Exception:
+        return None
+    m = GITHUB_REMOTE_RE.search(url)
+    return f"{m.group(1)}/{m.group(2)}" if m else None
+
+def fetch_github_description(slug: str) -> Optional[str]:
+    """Lee el campo 'description' del repo en la API de GitHub. None si la API no responde."""
+    import urllib.request
+
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "dev-standards-audit"}
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(f"https://api.github.com/repos/{slug}", headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read().decode("utf-8")).get("description") or ""
+    except Exception:
+        return None
 
 def check_description(project_path: Path) -> bool:
-    """Verifica descripción no vacía de <=350 caracteres en el manifiesto (RULES.md §5.8)."""
-    try:
-        p = project_path / "package.json"
-        if p.is_file():
-            desc = json.loads(p.read_text(encoding="utf-8")).get("description")
-            if isinstance(desc, str) and desc.strip():
-                return len(desc.strip()) <= DESCRIPTION_MAX_CHARS
-        for f in ("pyproject.toml", "Cargo.toml"):
-            p = project_path / f
-            if p.is_file():
-                txt = p.read_text(encoding="utf-8", errors="ignore")
-                m = re.search(r'^description\s*=\s*(["\'])(.*?)\1\s*$', txt, re.MULTILINE)
-                if m and m.group(2).strip():
-                    return len(m.group(2).strip()) <= DESCRIPTION_MAX_CHARS
-    except Exception:
-        pass
-    return False
+    """Verifica la descripción del repo en GitHub: no vacía y <=350 caracteres (RULES.md §5.8).
+
+    Sin remote de GitHub o sin respuesta de la API (red, rate limit, repo privado sin token)
+    el check falla: la regla se refiere al campo del hosting, no al manifiesto.
+    """
+    slug = github_slug(project_path)
+    if not slug:
+        return False
+    desc = fetch_github_description(slug)
+    if desc is None:
+        print(f"  ⚠️  {project_path.name}: no se pudo leer la descripción de {slug} en GitHub")
+        return False
+    desc = desc.strip()
+    return bool(desc) and len(desc) <= DESCRIPTION_MAX_CHARS
 
 REQUIRED_WIKI_PAGES = ("Home.md", "Architecture.md", "Getting-Started.md", "Operations.md")
 WIKI_MIN_CHARS = 80
@@ -347,7 +372,7 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("SemVer", a.has_semver),
             ("CHANGELOG", a.has_changelog),
             ("README c/ imágenes", a.readme_has_images),
-            ("Descripción ≤350 (§5.8)", a.has_description),
+            ("Descripción GitHub ≤350 (§5.8)", a.has_description),
             ("Wiki (wiki/ §5.9)", a.has_wiki),
             ("contexto_proyecto.md (§5.10)", a.has_contexto),
             (".gitignore", a.has_gitignore),

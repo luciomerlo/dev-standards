@@ -15508,9 +15508,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- RULES.md §5.8 audit check: `scripts/audit-standards.py` verifies a non-empty manifest
-  `description` of at most 350 characters (`package.json`, `pyproject.toml`, `Cargo.toml`);
-  `bootstrap-project.sh` rejects a longer `--desc`.
+- RULES.md §5.8 audit check: `scripts/audit-standards.py` reads the repository's GitHub
+  description via the REST API (`origin` remote; `GITHUB_TOKEN`/`GH_TOKEN` optional) and requires
+  it non-empty and at most 350 characters. `bootstrap-project.sh` rejects a longer `--desc` and
+  applies it with `gh repo edit --description` when `gh` is available.
 - RULES.md §5.10: every repository must keep an up-to-date `contexto_proyecto.md` at the
   root (architecture summary plus the full text of relevant source, config, and normative
   docs) so a later LLM can read the codebase without walking the tree. Reference generator:
@@ -17031,7 +17032,7 @@ y valida la presencia de:
   - Versión SemVer en manifiesto (package.json, pyproject.toml, Cargo.toml, go.mod, setup.py)
   - CHANGELOG.md (formato Keep a Changelog)
   - README.md con al menos una imagen (![...](...))
-  - Descripción no vacía de ≤350 caracteres en el manifiesto (RULES.md §5.8)
+  - Descripción del repo en GitHub no vacía y de ≤350 caracteres (RULES.md §5.8)
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
   - contexto_proyecto.md con la estructura de RULES.md §5.10
   - .gitignore
@@ -17144,25 +17145,50 @@ def check_readme_images(project_path: Path) -> bool:
     return bool(re.search(r"!\[.*\]\(.*\)", txt))
 
 DESCRIPTION_MAX_CHARS = 350
+GITHUB_REMOTE_RE = re.compile(r"github\.com[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
+
+def github_slug(project_path: Path) -> Optional[str]:
+    """Devuelve 'owner/repo' a partir del remote origin, o None si no apunta a GitHub."""
+    try:
+        url = subprocess.run(
+            ["git", "-C", str(project_path), "remote", "get-url", "origin"],
+            capture_output=True, text=True, timeout=10,
+        ).stdout.strip()
+    except Exception:
+        return None
+    m = GITHUB_REMOTE_RE.search(url)
+    return f"{m.group(1)}/{m.group(2)}" if m else None
+
+def fetch_github_description(slug: str) -> Optional[str]:
+    """Lee el campo 'description' del repo en la API de GitHub. None si la API no responde."""
+    import urllib.request
+
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "dev-standards-audit"}
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(f"https://api.github.com/repos/{slug}", headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read().decode("utf-8")).get("description") or ""
+    except Exception:
+        return None
 
 def check_description(project_path: Path) -> bool:
-    """Verifica descripción no vacía de <=350 caracteres en el manifiesto (RULES.md §5.8)."""
-    try:
-        p = project_path / "package.json"
-        if p.is_file():
-            desc = json.loads(p.read_text(encoding="utf-8")).get("description")
-            if isinstance(desc, str) and desc.strip():
-                return len(desc.strip()) <= DESCRIPTION_MAX_CHARS
-        for f in ("pyproject.toml", "Cargo.toml"):
-            p = project_path / f
-            if p.is_file():
-                txt = p.read_text(encoding="utf-8", errors="ignore")
-                m = re.search(r'^description\s*=\s*(["\'])(.*?)\1\s*$', txt, re.MULTILINE)
-                if m and m.group(2).strip():
-                    return len(m.group(2).strip()) <= DESCRIPTION_MAX_CHARS
-    except Exception:
-        pass
-    return False
+    """Verifica la descripción del repo en GitHub: no vacía y <=350 caracteres (RULES.md §5.8).
+
+    Sin remote de GitHub o sin respuesta de la API (red, rate limit, repo privado sin token)
+    el check falla: la regla se refiere al campo del hosting, no al manifiesto.
+    """
+    slug = github_slug(project_path)
+    if not slug:
+        return False
+    desc = fetch_github_description(slug)
+    if desc is None:
+        print(f"  ⚠️  {project_path.name}: no se pudo leer la descripción de {slug} en GitHub")
+        return False
+    desc = desc.strip()
+    return bool(desc) and len(desc) <= DESCRIPTION_MAX_CHARS
 
 REQUIRED_WIKI_PAGES = ("Home.md", "Architecture.md", "Getting-Started.md", "Operations.md")
 WIKI_MIN_CHARS = 80
@@ -17368,7 +17394,7 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("SemVer", a.has_semver),
             ("CHANGELOG", a.has_changelog),
             ("README c/ imágenes", a.readme_has_images),
-            ("Descripción ≤350 (§5.8)", a.has_description),
+            ("Descripción GitHub ≤350 (§5.8)", a.has_description),
             ("Wiki (wiki/ §5.9)", a.has_wiki),
             ("contexto_proyecto.md (§5.10)", a.has_contexto),
             (".gitignore", a.has_gitignore),
@@ -18295,6 +18321,17 @@ elif command -v python >/dev/null 2>&1; then
   python scripts/generate-contexto.py --root "$REPO_ROOT"
 else
   echo "⚠️  Python no disponible: ejecuta luego python scripts/generate-contexto.py"
+fi
+
+# 12) Descripción del repositorio en GitHub (RULES.md §5.8)
+if command -v gh >/dev/null 2>&1 && git -C "$REPO_ROOT" remote get-url origin 2>/dev/null | grep -q github.com; then
+  if (cd "$REPO_ROOT" && gh repo edit --description "$PROJECT_DESC" >/dev/null 2>&1); then
+    echo "📝  Descripción de GitHub actualizada (${#PROJECT_DESC}/350 caracteres)"
+  else
+    echo "⚠️  No se pudo actualizar la descripción en GitHub: gh repo edit --description \"...\""
+  fi
+else
+  echo "⚠️  Sin gh o sin remote de GitHub: fija la descripción del repo (inglés, ≤350 caracteres, RULES.md §5.8)"
 fi
 
 echo "✅  Scaffold completado en $REPO_ROOT"
@@ -20153,7 +20190,9 @@ Recorre cada subdirectorio de `--root` (ignora los que empiezan por `.`) y punt�
 
 ### Check de descripción (§5.8)
 
-`check_description()` exige un campo `description` no vacío de 350 caracteres como máximo en `package.json`, `pyproject.toml` o `Cargo.toml`. El bootstrap rechaza un `--desc` más largo. El campo "description" del hosting (GitHub) no se consulta: se mantiene manualmente alineado con el manifiesto y el README.
+`check_description()` obtiene `owner/repo` del remote `origin` y lee el campo "description" del repositorio en la API de GitHub (`GET /repos/{owner}/{repo}`). Aprueba si no está vacío y tiene 350 caracteres como máximo. Usa `GITHUB_TOKEN` o `GH_TOKEN` si están definidos (necesario para repos privados y para evitar el rate limit de 60 req/h). Sin remote de GitHub o sin respuesta de la API, el check falla y lo avisa por consola.
+
+`bootstrap-project.sh` rechaza un `--desc` de más de 350 caracteres y, si `gh` está disponible y el remote es de GitHub, lo aplica con `gh repo edit --description`. El idioma (inglés) no se valida automáticamente.
 
 ### Check de Wiki (§5.9)
 

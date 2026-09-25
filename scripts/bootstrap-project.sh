@@ -838,6 +838,17 @@ else
   echo "⚠️  Python no disponible: ejecuta luego python scripts/generate-contexto.py"
 fi
 
+# 12) Descripción del repositorio en GitHub (RULES.md §5.8)
+if command -v gh >/dev/null 2>&1 && git -C "$REPO_ROOT" remote get-url origin 2>/dev/null | grep -q github.com; then
+  if (cd "$REPO_ROOT" && gh repo edit --description "$PROJECT_DESC" >/dev/null 2>&1); then
+    echo "📝  Descripción de GitHub actualizada (${#PROJECT_DESC}/350 caracteres)"
+  else
+    echo "⚠️  No se pudo actualizar la descripción en GitHub: gh repo edit --description \"...\""
+  fi
+else
+  echo "⚠️  Sin gh o sin remote de GitHub: fija la descripción del repo (inglés, ≤350 caracteres, RULES.md §5.8)"
+fi
+
 echo "✅  Scaffold completado en $REPO_ROOT"
 echo "   → Edita README.md (badges, diagrama, capturas)"
 echo "   → Rellena wiki/ (Home, Architecture, Getting-Started, Operations)"
