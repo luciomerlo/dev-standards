@@ -13,6 +13,7 @@ y valida la presencia de:
   - Descripción del repo en GitHub no vacía y de ≤350 caracteres (RULES.md §5.8)
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
   - contexto_proyecto.md con la estructura de RULES.md §5.10
+  - Wiring de Graft (skill o .mcp.json) con graft/ fuera de git (RULES.md §9)
   - .gitignore
   - Dockerfile
   - CI (.github/workflows/*.yml)
@@ -44,6 +45,7 @@ class ProjectAudit:
     has_description: bool
     has_wiki: bool
     has_contexto: bool
+    has_graft: bool
     has_gitignore: bool
     has_dockerfile: bool
     has_ci: bool
@@ -200,6 +202,23 @@ def check_contexto(project_path: Path) -> bool:
     has_route = re.search(r"^## Ruta: `[^`]+`", txt, re.MULTILINE)
     return bool(has_summary and has_files and has_route)
 
+def check_graft(project_path: Path) -> bool:
+    """Verifica el wiring de Graft y que su caché graft/ no se versione (RULES.md §9)."""
+    wired = (project_path / ".claude" / "skills" / "graft" / "SKILL.md").is_file()
+    mcp = project_path / ".mcp.json"
+    if not wired and mcp.is_file():
+        try:
+            wired = "graft" in json.loads(mcp.read_text(encoding="utf-8")).get("mcpServers", {})
+        except Exception:
+            wired = False
+    if not wired:
+        return False
+    gi = project_path / ".gitignore"
+    if not gi.is_file():
+        return False
+    lines = {ln.strip() for ln in gi.read_text(encoding="utf-8", errors="ignore").splitlines()}
+    return bool(lines & {"/graft/", "graft/", "/graft"})
+
 def check_file_exists(project_path: Path, name: str) -> bool:
     return (project_path / name).exists()
 
@@ -274,6 +293,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
     has_description = check_description(project_path)
     has_wiki = check_wiki(project_path)
     has_contexto = check_contexto(project_path)
+    has_graft = check_graft(project_path)
     has_gitignore = check_file_exists(project_path, ".gitignore")
     has_dockerfile = check_file_exists(project_path, "Dockerfile")
     has_ci = check_ci(project_path)
@@ -289,6 +309,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_description": 5,
         "has_wiki": 5,
         "has_contexto": 5,
+        "has_graft": 5,
         "has_gitignore": 5,
         "has_dockerfile": 5,
         "has_ci": 10,
@@ -312,6 +333,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_description": has_description,
         "has_wiki": has_wiki,
         "has_contexto": has_contexto,
+        "has_graft": has_graft,
         "has_gitignore": has_gitignore,
         "has_dockerfile": has_dockerfile,
         "has_ci": has_ci,
@@ -331,6 +353,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_description=has_description,
         has_wiki=has_wiki,
         has_contexto=has_contexto,
+        has_graft=has_graft,
         has_gitignore=has_gitignore,
         has_dockerfile=has_dockerfile,
         has_ci=has_ci,
@@ -375,6 +398,7 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("Descripción GitHub ≤350 (§5.8)", a.has_description),
             ("Wiki (wiki/ §5.9)", a.has_wiki),
             ("contexto_proyecto.md (§5.10)", a.has_contexto),
+            ("Graft (§9)", a.has_graft),
             (".gitignore", a.has_gitignore),
             ("Dockerfile", a.has_dockerfile),
             ("CI/CD", a.has_ci),

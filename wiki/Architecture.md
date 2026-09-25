@@ -45,3 +45,4 @@ graph TD
 | §6 | Prohibición de secretos hardcodeados, escaneo automatizado, falsos positivos, `.env` |
 | §7 | Detección de CUDA, los 5 backends de cómputo, selección de UI/CLI, exclusión de modelos de difusión, implementación de referencia |
 | §8 | Estética de dashboards: `apple-design-skill` (Apple HIG) fijado por commit, revisión obligatoria en PR, mínimos de contraste/tamaño/color/gráficos, anti-plantilla, tokens |
+| §9 | Graft: grafo de contexto para agentes fijado a `0.19.0`, wiring versionado, `graft/` como caché, capa LLM opcional, telemetría deshabilitada |

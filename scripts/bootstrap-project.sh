@@ -826,6 +826,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 EOF
 
+# 10b) Graft: grafo de contexto para agentes (RULES.md §9)
+if command -v graft >/dev/null 2>&1; then
+  graft telemetry disable >/dev/null 2>&1 || true
+  (cd "$REPO_ROOT" && DO_NOT_TRACK=1 graft init --agents claude --no-global) \
+    || echo "⚠️  graft init falló: reintenta con graft init --agents claude --no-global (RULES.md §9.2)"
+else
+  echo "⚠️  Graft no instalado: npm install -g @nanonets/graft@0.19.0 && graft init --agents claude --no-global (RULES.md §9.2)"
+fi
+
 # 11) contexto_proyecto.md (RULES.md §5.10)
 cp "$(dirname "${BASH_SOURCE[0]}")/generate-contexto.py" scripts/generate-contexto.py 2>/dev/null || \
   curl -fsSL https://raw.githubusercontent.com/luciomerlo/dev-standards/main/scripts/generate-contexto.py -o scripts/generate-contexto.py

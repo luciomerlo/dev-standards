@@ -28,7 +28,8 @@ Después del scaffold:
 3. Poner la descripción del hosting en inglés, ≤350 caracteres, alineada al README (§5.8).
 4. Añadir código en `src/` y tests en `tests/`.
 5. Regenerar `contexto_proyecto.md` (`python scripts/generate-contexto.py`) en el mismo cambio que toque código, configuración o documentación normativa (§5.10).
-6. Si el proyecto tiene interfaz web: al cerrar el desarrollo inicial (primera versión usable de punta a punta, antes del primer release), correr `/fix` para medir y corregir los caminos lentos. Adjuntar el reporte, con los números de antes y después, al PR o al release (§3.4).
+6. Conectar Graft si el bootstrap no lo hizo: `graft init --agents claude --no-global` y versionar el wiring (§9, [Graft](Graft.md)).
+7. Si el proyecto tiene interfaz web: al cerrar el desarrollo inicial (primera versión usable de punta a punta, antes del primer release), correr `/fix` para medir y corregir los caminos lentos. Adjuntar el reporte, con los números de antes y después, al PR o al release (§3.4).
 
 ## Adoptar en un repo que ya existe
 
@@ -46,6 +47,9 @@ No hace falta re-bootstrap si el árbol ya tiene manifiesto, CI y README. Falta 
 6. Copiar `scripts/generate-contexto.py` y generar `contexto_proyecto.md`
    (`python scripts/generate-contexto.py`). Regenerarlo cada vez que cambie
    código, configuración o documentación normativa (§5.10).
+7. Instalar Graft (`npm install -g @nanonets/graft@0.19.0`), correr
+   `graft init --agents claude --no-global` y versionar `.claude/`, `.mcp.json`,
+   `.ignore` y `.gitignore` (§9).
 
 ## Añadir o cambiar un estándar
 

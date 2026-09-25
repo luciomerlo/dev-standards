@@ -32,6 +32,10 @@ El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` 
 python scripts/generate-contexto.py
 ```
 
+### Check de Graft (§9)
+
+`check_graft()` exige `.claude/skills/graft/SKILL.md` o una entrada `graft` en `mcpServers` de `.mcp.json`, y `/graft/` en `.gitignore` para que el caché no se versione. No valida la versión instalada ni que el grafo esté actualizado; para eso, `graft check` en local.
+
 ### Check de escaneo de secretos (§6)
 
 `check_secret_scan()` verifica que exista `scripts/check-secrets.py` y que

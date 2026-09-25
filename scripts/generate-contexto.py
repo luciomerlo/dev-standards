@@ -38,6 +38,9 @@ EXCLUDE_DIRS = {
     "venv",
 }
 
+# Directorios excluidos solo en la raíz: caché local de Graft (RULES.md §9.3).
+ROOT_EXCLUDE_DIRS = {"graft"}
+
 # Salidas generadas: no se vuelcan (el propio contexto se excluye por ruta).
 ROOT_GENERATED = {"AUDIT_REPORT.md", "project_audit_summary.csv"}
 
@@ -236,7 +239,7 @@ def collect(
         current = Path(dirpath)
         kept: list[str] = []
         for dirname in sorted(dirnames):
-            if dirname in EXCLUDE_DIRS:
+            if dirname in EXCLUDE_DIRS or (current == root and dirname in ROOT_EXCLUDE_DIRS):
                 skipped_dirs.append((current / dirname).relative_to(root).as_posix())
                 continue
             kept.append(dirname)

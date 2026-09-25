@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- RULES.md §9 (Graft): every source repository is wired to [`trailhq/Graft`](https://github.com/trailhq/Graft)
+  (`@nanonets/graft@0.19.0`) with `graft init --agents claude --no-global`; the wiring (`.claude/`,
+  `.mcp.json`, `.ignore`) is committed, `graft/` stays a git-ignored cache, `--deep` is opt-in, telemetry
+  is disabled. Audit check `check_graft()`, bootstrap step, `generate-contexto.py` skips root `graft/`,
+  new Wiki page `wiki/Graft.md`. This repository is wired.
 - RULES.md §3.4: repositories with a web UI run the `/fix` performance skill (measure first,
   then hidden reloads, non-Latin-1 regex hot paths, typing re-render storms, costly `:has()`,
   late layout shifts, repeated work) once initial development is done and before the first

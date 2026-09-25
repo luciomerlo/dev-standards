@@ -8,10 +8,18 @@
   - Frameworks y plataforma: Docker, GitHub Actions, pre-commit, commitlint, config.yaml como fuente única de configuración.
   - Dependencias principales: pytest>=7.4, ruff>=0.1, mypy>=1.5, pre-commit>=3.3.
 
-- Árbol de directorios y archivos relevantes (43 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
+- Árbol de directorios y archivos relevantes (49 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
 
 ```text
 .
+├── .claude/
+│   ├── helpers/
+│   │   ├── graft-hooks.cjs
+│   │   └── graft-statusline.cjs
+│   ├── skills/
+│   │   └── graft/
+│   │       └── SKILL.md
+│   └── settings.json
 ├── .github/
 │   └── workflows/
 │       └── ci.yml
@@ -34,6 +42,7 @@
 │   ├── Compute.md
 │   ├── Dashboards.md
 │   ├── Getting-Started.md
+│   ├── Graft.md
 │   ├── Home.md
 │   ├── Operations.md
 │   └── _Sidebar.md
@@ -41,6 +50,7 @@
 ├── .editorconfig
 ├── .env.example
 ├── .gitignore
+├── .mcp.json
 ├── .pre-commit-config.yaml
 ├── CHANGELOG.md
 ├── CONVERSACIONES.md
@@ -62,9 +72,397 @@
 └── test.py
 ```
 
-- Fuera del volcado de contenido: carpetas `.git`, `.ruff_cache`, `scripts/__pycache__`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `LICENSE`.
+- Fuera del volcado de contenido: carpetas `.git`, `.ruff_cache`, `graft`, `scripts/__pycache__`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `.ignore`, `LICENSE`.
 
 # ARCHIVOS DEL PROYECTO
+
+## Ruta: `.claude/helpers/graft-hooks.cjs`
+
+```javascript
+#!/usr/bin/env node
+const path = require('path');
+const fs = require('fs');
+const { pathToFileURL } = require('url');
+const { execFileSync } = require('child_process');
+const dir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+const BAKED = "/opt/node22/lib/node_modules/@nanonets/graft/dist/claude";
+
+// The dist/claude dir of @nanonets/graft resolved from a base whose node_modules is searched.
+function fromPkg(base) {
+  try {
+    const pkg = require.resolve('@nanonets/graft/package.json', { paths: [base] });
+    return path.join(path.dirname(pkg), 'dist', 'claude');
+  } catch { return null; }
+}
+
+// The global node_modules dir per npm (handles Homebrew/Windows/volta). Queried on demand.
+function globalRoot() {
+  try {
+    const root = execFileSync('npm', ['root', '-g'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], shell: process.platform === 'win32' }).trim();
+    return root || null;
+  } catch { return null; /* npm unavailable */ }
+}
+
+// The version of the package a dist/claude dir belongs to, or null if unreadable.
+function versionOf(distClaude) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(distClaude, '..', '..', 'package.json'), 'utf8')).version || null;
+  } catch { return null; }
+}
+
+// Numeric-dotted compare of the release part; an unreadable version loses to any known one.
+function newer(a, b) {
+  if (!a) return false;
+  if (!b) return true;
+  const p = (v) => String(v).split('-')[0].split('.').map((n) => Number(n) || 0);
+  const pa = p(a), pb = p(b);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d > 0;
+  }
+  return false;
+}
+
+// The highest-versioned dir in `dirs` that actually contains `name`, or null.
+function best(dirs, name) {
+  let bestDir = null, bestVer = null;
+  for (const d of dirs) {
+    if (!d || !fs.existsSync(path.join(d, name))) continue;
+    const v = versionOf(d);
+    if (bestDir === null || newer(v, bestVer)) { bestDir = d; bestVer = v; }
+  }
+  return bestDir;
+}
+
+function entry(name) {
+  // Cheap candidates first, and only shell out to npm when every one of them misses.
+  const cheap = [BAKED, fromPkg(dir), fromPkg(path.join(path.dirname(process.execPath), '..', 'lib'))];
+  const hit = best(cheap, name);
+  if (hit) return path.join(hit, name);
+  const gr = globalRoot();
+  const global = gr && path.join(gr, '@nanonets', 'graft', 'dist', 'claude');
+  if (global && fs.existsSync(path.join(global, name))) return path.join(global, name);
+  return path.join(dir, 'dist', 'claude', name); // last-ditch; import will no-op if absent
+}
+
+import(pathToFileURL(entry("hooks.js")).href).then((m) => m.main(process.argv[2])).catch(() => { /* graft unavailable — no-op */ });
+```
+
+## Ruta: `.claude/helpers/graft-statusline.cjs`
+
+```javascript
+#!/usr/bin/env node
+const path = require('path');
+const fs = require('fs');
+const { pathToFileURL } = require('url');
+const { execFileSync } = require('child_process');
+const dir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+const BAKED = "/opt/node22/lib/node_modules/@nanonets/graft/dist/claude";
+
+// The dist/claude dir of @nanonets/graft resolved from a base whose node_modules is searched.
+function fromPkg(base) {
+  try {
+    const pkg = require.resolve('@nanonets/graft/package.json', { paths: [base] });
+    return path.join(path.dirname(pkg), 'dist', 'claude');
+  } catch { return null; }
+}
+
+// The global node_modules dir per npm (handles Homebrew/Windows/volta). Queried on demand.
+function globalRoot() {
+  try {
+    const root = execFileSync('npm', ['root', '-g'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], shell: process.platform === 'win32' }).trim();
+    return root || null;
+  } catch { return null; /* npm unavailable */ }
+}
+
+// The version of the package a dist/claude dir belongs to, or null if unreadable.
+function versionOf(distClaude) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(distClaude, '..', '..', 'package.json'), 'utf8')).version || null;
+  } catch { return null; }
+}
+
+// Numeric-dotted compare of the release part; an unreadable version loses to any known one.
+function newer(a, b) {
+  if (!a) return false;
+  if (!b) return true;
+  const p = (v) => String(v).split('-')[0].split('.').map((n) => Number(n) || 0);
+  const pa = p(a), pb = p(b);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d > 0;
+  }
+  return false;
+}
+
+// The highest-versioned dir in `dirs` that actually contains `name`, or null.
+function best(dirs, name) {
+  let bestDir = null, bestVer = null;
+  for (const d of dirs) {
+    if (!d || !fs.existsSync(path.join(d, name))) continue;
+    const v = versionOf(d);
+    if (bestDir === null || newer(v, bestVer)) { bestDir = d; bestVer = v; }
+  }
+  return bestDir;
+}
+
+function entry(name) {
+  // Cheap candidates first, and only shell out to npm when every one of them misses.
+  const cheap = [BAKED, fromPkg(dir), fromPkg(path.join(path.dirname(process.execPath), '..', 'lib'))];
+  const hit = best(cheap, name);
+  if (hit) return path.join(hit, name);
+  const gr = globalRoot();
+  const global = gr && path.join(gr, '@nanonets', 'graft', 'dist', 'claude');
+  if (global && fs.existsSync(path.join(global, name))) return path.join(global, name);
+  return path.join(dir, 'dist', 'claude', name); // last-ditch; import will no-op if absent
+}
+
+import(pathToFileURL(entry("statusline.js")).href).then((m) => m.main()).catch(() => { /* graft unavailable — no-op */ });
+```
+
+## Ruta: `.claude/settings.json`
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-statusline.cjs\""
+  },
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-statusline.cjs\""
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-hooks.cjs\" post-edit",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|mcp__graft__|Read|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-hooks.cjs\" tool-savings",
+            "timeout": 8000
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-hooks.cjs\" prompt",
+            "timeout": 15000
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-hooks.cjs\" session-start",
+            "timeout": 8000
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-hooks.cjs\" stop",
+            "timeout": 8000
+          }
+        ]
+      }
+    ]
+  },
+  "footerLinksRegexes": [
+    "graft/[\\w./-]+\\.md"
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(graft:*)",
+      "Bash(npx graft:*)",
+      "Bash(graft-dev:*)",
+      "Bash(node dist/cli.js:*)"
+    ]
+  }
+}
+```
+
+## Ruta: `.claude/skills/graft/SKILL.md`
+
+```markdown
+---
+name: graft
+description: This repo is indexed by graft/. For ANY task here, whether
+  understanding how something works, finding where code lives, tracing what
+  calls a symbol or what a change breaks, or scoping an edit, get your context
+  from graft before grepping or reading source files.
+---
+
+# graft
+
+`graft/` holds a graph of this repo: small markdown nodes that each explain one
+part in prose and name the exact `file:line` spans they cover, plus a wiring
+graph of who-calls-what. Querying a node costs a few hundred tokens; rebuilding
+that understanding by reading source costs thousands, and misses the edges.
+
+Every command below is `$0`, needs no API key, and returns in under a second.
+There are six of them. **Pick the one that fits the task, run it, act on the
+answer; don't chain tools hoping for more. Most tasks need one call.**
+
+## The tools
+
+### 1 · `graft ask "<question>" --source`: locate + understand (the default)
+Ranked retrieval over the graph, routed automatically between prose nodes and
+the wiring graph, returning the top hits with exact `file:line`.
+- `--source` inlines the code at each hit, the ≤8-line **crux** of each
+  definition, so the result IS the code you need, no follow-up file read. Add
+  `--full` only when the crux is too small to act on.
+- `--in <path>` narrows to a subtree before ranking; `-n N` caps results (default 8).
+- **Use it when** the question is conceptual or locational: "how does auth
+  work", "where is rate-limiting handled", "what assembles the request pipeline".
+- One ask usually answers. A genuinely multi-part question needs one ask per
+  distinct sub-aspect, never the same question reworded. Few or weak hits mean
+  switch tool (grep / skeleton / callers), don't re-ask.
+
+### 2 · `graft grep "<pattern>"`: exhaustive find
+Regex (or `--fixed` for a literal) over every indexed file, hits **grouped by
+enclosing symbol** and ranked by coupling; it also reports files it couldn't read.
+- **Use it when** you need every occurrence: all call sites, all uses of a
+  constant, all providers. `ask` is ranked top-N and *will* miss instances;
+  grep won't. One grep replaces a spray of asks.
+- Search a **short symbol name or literal**, not a full guessed signature: an
+  over-specific regex (`func (s *Server) GenerateHandler`) returns nothing even
+  when the code is indexed. If a grep misses, **loosen it** (drop the receiver
+  and signature, keep the bare name) and retry `graft grep` — do NOT switch to
+  raw `grep -rn`, which is slower and unranked.
+- `-i` case-insensitive; `--in <path>` scopes to a subtree. Raw `grep -rn` is
+  only for files graft genuinely doesn't index (docs, configs, brand-new files).
+
+### 3 · `graft skeleton <file>`: a file's API at a glance
+Signatures-only view of one file (every function / method / type with its span)
+in ~200 tokens, ~10x cheaper than reading the file.
+- **Use it when** you need "what's in this file / what can I call here" before
+  editing or wiring into it. One skeleton is the whole answer for a file; don't
+  re-skeleton the same file, and don't skeleton every file `map` already named.
+
+### 4 · `graft callers <symbol>`: the exact edges
+Precomputed call/reference edges, not a text search. Symbol can be bare
+(`Foo`), qualified (`Class.method`), or package-qualified (`pkg.Fn`).
+- default `--direction in`: **who calls/references** this; run before you
+  rename, delete, or change its signature.
+- `--direction out`: **what this symbol itself calls/depends on** (the old `callees`).
+- `--depth N`: walk transitively N hops for the **full blast radius** (the old
+  `impact`); `--depth 2` is the usual "what breaks if I touch this".
+- `--depth all`: the **entire connected closure** — every source reachable
+  through the edges. Reach for this before a **refactor, rename, or any
+  multi-file change**: it surfaces the sibling and downstream files (platform
+  variants, a module you must split out) that a single-file edit would miss.
+
+### 5 · `graft map`: orientation for an unfamiliar repo or area
+A token-budgeted tour: directory clusters, per-directory hubs, and global
+hotspots, straight from the wiring graph.
+- **Use it when** you land in a repo cold or are asked for "the architecture".
+  `map` alone is the answer: read the hub cards it names; do NOT then skeleton
+  or ask your way through every subsystem it lists. `--max-dirs N` widens it.
+
+### 6 · Lifecycle: `graft build` / `graft check`
+Every tool above refreshes the graph itself before answering, so what those tools
+return always describes the code as it is right now — including edits you just made
+and have not committed. You do **not** need to run `build` after editing.
+
+One caveat, if you `grep` the markdown under `graft/` directly: those cards are a
+projection, rebuilt at the end of the turn rather than on each query, so after an edit
+they can lag. The tools above never do — prefer them, and treat a card's spans as
+stale if you have edited that file this turn.
+
+`build` is for the LLM layer (`--deep` adds a concept map; skip unless asked);
+`check` fails when `graft/` is stale, for CI.
+
+## Scenarios: the shortest path through a coding task
+
+| When you're… | Reach for | Calls |
+|---|---|---|
+| Onboarding / "explain this codebase" | `graft map`, then read the named hub cards | 1 |
+| Understanding a flow ("how does X work") | `graft ask "<flow>" --source` | 1 |
+| Finding where a change belongs | `graft ask "where is <behavior>" --source` | 1 |
+| Editing a symbol you can already name | `graft grep "<symbol>"`, edit at the `file:line` (skip `ask` — you know where it is) | 1 |
+| Renaming / deleting / changing a signature | `graft callers <sym> --depth 2` first | 1 |
+| Refactor / multi-file change (before editing) | `graft callers <sym> --depth all` — map every connected file, don't stop at the first | 1 |
+| "What does this depend on?" | `graft callers <sym> --direction out` | 1 |
+| Finding every occurrence of a pattern | `graft grep "<literal>"` | 1 |
+| "What's the API of this file?" | `graft skeleton <file>` | 1 |
+| Debugging a failure in area X | `graft ask "<symptom>" --source`, then `callers` on the suspect | 1–2 |
+| Judging a diff's risk before merge | `graft callers <changed sym> --depth 2` | 1 / symbol |
+| Working inside one repo of a monorepo | add `--in <scope>/` to ask / grep / callers | n/a |
+
+In a multi-repo workspace, graft ranks fairly so the biggest repo can't drown
+the rest, and every hit carries a `[scope/]` label naming its sub-project; when
+you already know where you're working, narrow with `graft ask "<task>" --in <scope>/`.
+
+## Spend the fewest calls
+- A node's `covers:` list already gives exact `file:line` for every symbol, so
+  cite straight from it. The spans are generated from source and authoritative;
+  don't re-open or re-grep files to "double-check".
+- When the task already names the file or symbol to change, go straight there:
+  `graft grep "<symbol>"` for the exact `file:line`, then edit. Reserve
+  `graft ask` for when you don't yet know where the code lives — an `ask`
+  round-trip is wasted on a target you can already name.
+- Trust the answer and act. Reach for a second tool only when the first genuinely
+  fell short: weak hits, a truncated span, or a need to be exhaustive.
+- If graft names a path that isn't on disk, its index is ahead of your checkout
+  (a branch switch or unpulled move). Don't read the missing file — `graft grep`
+  the symbol to find where it lives now, or run `graft build` to refresh.
+
+## Report what graft saved, every turn
+Each retrieval tool **opens** its output with a `[graft] tokens saved ≈ N` line:
+the estimated tokens that call saved versus reading the files it covers whole.
+Whenever you used any graft tool in a turn, close your reply with a one-line
+tally summing those numbers across every graft call you made, e.g.
+`🌱 graft saved ~12,400 tokens this turn (3 calls)`. A call with no such line
+(tiny files, where the pointers cost as much as the source) saved nothing, so
+skip it. This is the per-turn figure; the statusline carries the running
+session total.
+
+Once a turn has been billed, each line also states what that call was worth in
+dollars, at the rate this session is actually paying for input tokens — include
+that total alongside the tokens, e.g. `🌱 graft saved ~12,400 tokens (~$0.04)
+this turn`. When a line carries no dollar figure, report tokens alone rather
+than pricing them yourself.
+
+**Never pipe a graft command through `head`, `tail`, or `sed -n`.** Every tool
+is already capped and states what it dropped; clipping it costs you hits you
+asked for, and it silently drops the savings line the statusline's running
+total is parsed from.
+
+## When graft isn't enough
+- Span truncated ("+N more lines"): open the file at that exact range.
+- A node lacks a detail: ask a more specific question; only then read source at
+  the exact `file:line`, never a whole file to rebuild understanding graft gives.
+- You may also grep / ls / cat inside `graft/` directly (plain markdown;
+  `graft/INDEX.md` indexes the nodes), but the tools above are faster and
+  exhaustive where it matters, so reach for them first.
+
+When the graft MCP server is connected, these are exposed as tools too:
+`graft_find_code`, `graft_find_all`, `graft_file_api`, `graft_trace_calls` (with
+`direction` / `depth`), `graft_repo_map`, `graft_check_freshness`. Use whichever surface is
+available; the guidance is identical.
+```
 
 ## Ruta: `.continueignore`
 
@@ -477,6 +875,24 @@ data/
 .continue/
 .omc/
 __pycache__/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+```
+
+## Ruta: `.mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "graft": {
+      "command": "graft",
+      "args": [
+        "mcp"
+      ]
+    }
+  }
+}
 ```
 
 ## Ruta: `.pre-commit-config.yaml`
@@ -15509,6 +15925,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- RULES.md §9 (Graft): every source repository is wired to [`trailhq/Graft`](https://github.com/trailhq/Graft)
+  (`@nanonets/graft@0.19.0`) with `graft init --agents claude --no-global`; the wiring (`.claude/`,
+  `.mcp.json`, `.ignore`) is committed, `graft/` stays a git-ignored cache, `--deep` is opt-in, telemetry
+  is disabled. Audit check `check_graft()`, bootstrap step, `generate-contexto.py` skips root `graft/`,
+  new Wiki page `wiki/Graft.md`. This repository is wired.
 - RULES.md §3.4: repositories with a web UI run the `/fix` performance skill (measure first,
   then hidden reloads, non-Latin-1 regex hot paths, typing re-render storms, costly `:has()`,
   late layout shifts, repeated work) once initial development is done and before the first
@@ -16871,7 +17292,7 @@ graph TD
 
 | Archivo / carpeta | Rol |
 |---|---|
-| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7), estética de dashboards con Apple HIG (§8) |
+| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7), estética de dashboards con Apple HIG (§8), grafo de contexto Graft (§9) |
 | [`contexto_proyecto.md`](contexto_proyecto.md) | Base de código consolidada para un LLM posterior (§5.10). Regenerar con `scripts/generate-contexto.py` |
 | [`docs/code-standards.md`](docs/code-standards.md) | Nomenclatura, formato, testing, checklist de revisión |
 | [`docs/commit-conventions.md`](docs/commit-conventions.md) | Convenciones de commits |
@@ -17047,6 +17468,18 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
     *   **Datos sin análisis:** si solo hace falta mostrar valores, sin tendencia ni comparación, se usa una tabla o lista ordenable y buscable, no un gráfico.
 *   **8.6. Punto de Vista, no Plantilla:** Siguiendo el lente de *craft* del skill, se evitan los tres looks genéricos que dominan la UI generada (crema cálido con serif y acento terracota; casi negro con un único acento ácido; retícula de líneas finas, radio cero y columnas densas), así como el "número grande sobre etiqueta chica con acento en gradiente" y los marcadores 01/02/03 sobre contenido que no es una secuencia. Cada dashboard concentra su énfasis en un solo elemento distintivo; navegación y controles usan componentes y convenciones familiares.
 *   **8.7. Tokens de Diseño:** Cada proyecto con dashboard define sus tokens en el SSoT (`config.yaml` o un archivo de tokens referenciado desde él). Como mínimo: de 4 a 6 colores con rol (superficie, contenido, acento, señal), cada uno con variante clara y oscura y su contraste declarado, y una escala tipográfica. Queda prohibido fijar colores o tamaños sueltos en los componentes (§1).
+
+---
+
+## 9. Grafo de Contexto para Agentes (Graft)
+
+*   **9.1. Estándar de Referencia:** Todo repositorio con código fuente se conecta a [`trailhq/Graft`](https://github.com/trailhq/Graft) (paquete npm `@nanonets/graft`, licencia MIT), fijado a la versión `0.19.0`. Graft construye con tree-sitter un grafo del código, en archivos markdown enlazados más un grafo por símbolo, y lo expone a los agentes (Claude Code, Codex, Cursor y otros) mediante un skill, hooks y un servidor MCP. Así el agente no tiene que re-explorar el repo en cada sesión. Actualizar la versión es un cambio explícito que se registra en el CHANGELOG.
+*   **9.2. Instalación y Wiring:** Se instala una vez por máquina con `npm install -g @nanonets/graft@0.19.0` (requiere Node ≥ 20) y, en cada repositorio, se corre `graft init --agents claude --no-global`, agregando más ids de `--agents` si el proyecto usa otros agentes. `--no-global` es obligatorio para que no escriba configuración de nivel usuario (`~/.claude`, `~/.codex`) que afectaría a todos los repos. El bootstrap (§5.6) lo ejecuta automáticamente cuando `graft` está disponible.
+*   **9.3. Qué se Versiona:** Se versiona el wiring que genera `init`: `.claude/settings.json` (bloques de statusline y hooks, fusionados con la configuración existente), `.claude/helpers/graft-*.cjs`, `.claude/skills/graft/SKILL.md`, `.mcp.json` e `.ignore`. El grafo (`graft/`) **no se versiona**: es un caché local regenerable que `graft build` agrega a `.gitignore` y que cada colaborador genera con `graft build`. `contexto_proyecto.md` (§5.10) lo excluye.
+*   **9.4. Capa Estructural por Defecto:** `graft build`, `check`, `ask`, `callers`, `grep`, `map` y `blast` son deterministas y no llaman a ningún modelo ni requieren key. La capa LLM (`graft build --deep`) es opcional, y si se usa envía el código al proveedor configurado. Solo se habilita con un proveedor que el proyecto autorice para su código, con la key inyectada por entorno (`GRAFT_PROVIDER`, `GRAFT_API_KEY`, `GRAFT_MODEL`; §6.4) y nunca versionada.
+*   **9.5. Telemetría Deshabilitada:** Graft envía estadísticas anónimas de uso a un tercero. En todas las máquinas del ecosistema se deshabilita con `graft telemetry disable` y/o `DO_NOT_TRACK=1`. En CI ya viene deshabilitada.
+*   **9.6. Uso en PRs (recomendado):** Todo PR que modifique código puede adjuntar el radio de impacto con `graft blast --base origin/main --format markdown`, que lista las áreas que dependen de las líneas tocadas, para orientar la revisión y los tests.
+*   **9.7. Complementariedad:** Graft no reemplaza a `contexto_proyecto.md` (§5.10) ni a la Wiki (§5.9). El contexto consolidado es un volcado estático y portable a cualquier LLM; Graft es un índice vivo, consultable por el agente durante la sesión. Ambos se mantienen.
 ```
 
 ## Ruta: `scripts/audit-standards.py`
@@ -17067,6 +17500,7 @@ y valida la presencia de:
   - Descripción del repo en GitHub no vacía y de ≤350 caracteres (RULES.md §5.8)
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
   - contexto_proyecto.md con la estructura de RULES.md §5.10
+  - Wiring de Graft (skill o .mcp.json) con graft/ fuera de git (RULES.md §9)
   - .gitignore
   - Dockerfile
   - CI (.github/workflows/*.yml)
@@ -17098,6 +17532,7 @@ class ProjectAudit:
     has_description: bool
     has_wiki: bool
     has_contexto: bool
+    has_graft: bool
     has_gitignore: bool
     has_dockerfile: bool
     has_ci: bool
@@ -17254,6 +17689,23 @@ def check_contexto(project_path: Path) -> bool:
     has_route = re.search(r"^## Ruta: `[^`]+`", txt, re.MULTILINE)
     return bool(has_summary and has_files and has_route)
 
+def check_graft(project_path: Path) -> bool:
+    """Verifica el wiring de Graft y que su caché graft/ no se versione (RULES.md §9)."""
+    wired = (project_path / ".claude" / "skills" / "graft" / "SKILL.md").is_file()
+    mcp = project_path / ".mcp.json"
+    if not wired and mcp.is_file():
+        try:
+            wired = "graft" in json.loads(mcp.read_text(encoding="utf-8")).get("mcpServers", {})
+        except Exception:
+            wired = False
+    if not wired:
+        return False
+    gi = project_path / ".gitignore"
+    if not gi.is_file():
+        return False
+    lines = {ln.strip() for ln in gi.read_text(encoding="utf-8", errors="ignore").splitlines()}
+    return bool(lines & {"/graft/", "graft/", "/graft"})
+
 def check_file_exists(project_path: Path, name: str) -> bool:
     return (project_path / name).exists()
 
@@ -17328,6 +17780,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
     has_description = check_description(project_path)
     has_wiki = check_wiki(project_path)
     has_contexto = check_contexto(project_path)
+    has_graft = check_graft(project_path)
     has_gitignore = check_file_exists(project_path, ".gitignore")
     has_dockerfile = check_file_exists(project_path, "Dockerfile")
     has_ci = check_ci(project_path)
@@ -17343,6 +17796,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_description": 5,
         "has_wiki": 5,
         "has_contexto": 5,
+        "has_graft": 5,
         "has_gitignore": 5,
         "has_dockerfile": 5,
         "has_ci": 10,
@@ -17366,6 +17820,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_description": has_description,
         "has_wiki": has_wiki,
         "has_contexto": has_contexto,
+        "has_graft": has_graft,
         "has_gitignore": has_gitignore,
         "has_dockerfile": has_dockerfile,
         "has_ci": has_ci,
@@ -17385,6 +17840,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_description=has_description,
         has_wiki=has_wiki,
         has_contexto=has_contexto,
+        has_graft=has_graft,
         has_gitignore=has_gitignore,
         has_dockerfile=has_dockerfile,
         has_ci=has_ci,
@@ -17429,6 +17885,7 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("Descripción GitHub ≤350 (§5.8)", a.has_description),
             ("Wiki (wiki/ §5.9)", a.has_wiki),
             ("contexto_proyecto.md (§5.10)", a.has_contexto),
+            ("Graft (§9)", a.has_graft),
             (".gitignore", a.has_gitignore),
             ("Dockerfile", a.has_dockerfile),
             ("CI/CD", a.has_ci),
@@ -18343,6 +18800,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 EOF
 
+# 10b) Graft: grafo de contexto para agentes (RULES.md §9)
+if command -v graft >/dev/null 2>&1; then
+  graft telemetry disable >/dev/null 2>&1 || true
+  (cd "$REPO_ROOT" && DO_NOT_TRACK=1 graft init --agents claude --no-global) \
+    || echo "⚠️  graft init falló: reintenta con graft init --agents claude --no-global (RULES.md §9.2)"
+else
+  echo "⚠️  Graft no instalado: npm install -g @nanonets/graft@0.19.0 && graft init --agents claude --no-global (RULES.md §9.2)"
+fi
+
 # 11) contexto_proyecto.md (RULES.md §5.10)
 cp "$(dirname "${BASH_SOURCE[0]}")/generate-contexto.py" scripts/generate-contexto.py 2>/dev/null || \
   curl -fsSL https://raw.githubusercontent.com/luciomerlo/dev-standards/main/scripts/generate-contexto.py -o scripts/generate-contexto.py
@@ -18531,6 +18997,9 @@ EXCLUDE_DIRS = {
     "vendor",
     "venv",
 }
+
+# Directorios excluidos solo en la raíz: caché local de Graft (RULES.md §9.3).
+ROOT_EXCLUDE_DIRS = {"graft"}
 
 # Salidas generadas: no se vuelcan (el propio contexto se excluye por ruta).
 ROOT_GENERATED = {"AUDIT_REPORT.md", "project_audit_summary.csv"}
@@ -18730,7 +19199,7 @@ def collect(
         current = Path(dirpath)
         kept: list[str] = []
         for dirname in sorted(dirnames):
-            if dirname in EXCLUDE_DIRS:
+            if dirname in EXCLUDE_DIRS or (current == root and dirname in ROOT_EXCLUDE_DIRS):
                 skipped_dirs.append((current / dirname).relative_to(root).as_posix())
                 continue
             kept.append(dirname)
@@ -19927,6 +20396,7 @@ if __name__ == "__main__":
 * [Operations](Operations)
 * [Compute](Compute)
 * [Dashboards](Dashboards)
+* [Graft](Graft)
 * [RULES.md](../RULES.md)
 * [README](../README.md)
 * [CHANGELOG](../CHANGELOG.md)
@@ -19982,6 +20452,7 @@ graph TD
 | §6 | Prohibición de secretos hardcodeados, escaneo automatizado, falsos positivos, `.env` |
 | §7 | Detección de CUDA, los 5 backends de cómputo, selección de UI/CLI, exclusión de modelos de difusión, implementación de referencia |
 | §8 | Estética de dashboards: `apple-design-skill` (Apple HIG) fijado por commit, revisión obligatoria en PR, mínimos de contraste/tamaño/color/gráficos, anti-plantilla, tokens |
+| §9 | Graft: grafo de contexto para agentes fijado a `0.19.0`, wiring versionado, `graft/` como caché, capa LLM opcional, telemetría deshabilitada |
 ````
 
 ## Ruta: `wiki/Compute.md`
@@ -20211,7 +20682,8 @@ Después del scaffold:
 3. Poner la descripción del hosting en inglés, ≤350 caracteres, alineada al README (§5.8).
 4. Añadir código en `src/` y tests en `tests/`.
 5. Regenerar `contexto_proyecto.md` (`python scripts/generate-contexto.py`) en el mismo cambio que toque código, configuración o documentación normativa (§5.10).
-6. Si el proyecto tiene interfaz web: al cerrar el desarrollo inicial (primera versión usable de punta a punta, antes del primer release), correr `/fix` para medir y corregir los caminos lentos. Adjuntar el reporte, con los números de antes y después, al PR o al release (§3.4).
+6. Conectar Graft si el bootstrap no lo hizo: `graft init --agents claude --no-global` y versionar el wiring (§9, [Graft](Graft.md)).
+7. Si el proyecto tiene interfaz web: al cerrar el desarrollo inicial (primera versión usable de punta a punta, antes del primer release), correr `/fix` para medir y corregir los caminos lentos. Adjuntar el reporte, con los números de antes y después, al PR o al release (§3.4).
 
 ## Adoptar en un repo que ya existe
 
@@ -20229,6 +20701,9 @@ No hace falta re-bootstrap si el árbol ya tiene manifiesto, CI y README. Falta 
 6. Copiar `scripts/generate-contexto.py` y generar `contexto_proyecto.md`
    (`python scripts/generate-contexto.py`). Regenerarlo cada vez que cambie
    código, configuración o documentación normativa (§5.10).
+7. Instalar Graft (`npm install -g @nanonets/graft@0.19.0`), correr
+   `graft init --agents claude --no-global` y versionar `.claude/`, `.mcp.json`,
+   `.ignore` y `.gitignore` (§9).
 
 ## Añadir o cambiar un estándar
 
@@ -20236,6 +20711,76 @@ No hace falta re-bootstrap si el árbol ya tiene manifiesto, CI y README. Falta 
 2. Si el estándar es comprobable: extender `scripts/audit-standards.py`.
 3. Si nace con el repo: extender `scripts/bootstrap-project.sh`.
 4. Actualizar esta Wiki y el checklist del README en el mismo cambio.
+````
+
+## Ruta: `wiki/Graft.md`
+
+````markdown
+# Graft — dev-standards
+
+Grafo de contexto del código para agentes, según RULES.md §9. Usa [`trailhq/Graft`](https://github.com/trailhq/Graft) (npm `@nanonets/graft`, MIT), fijado a la versión `0.19.0`.
+
+## Qué hace
+
+- Con tree-sitter, sin LLM ni key, construye `graft/`: un grafo por símbolo (`graft/.graph/wiring.json`) y tarjetas markdown por archivo.
+- Conecta el grafo a Claude Code con un skill, hooks (statusline, blast radius al editar, re-sync al final de cada turno) y un servidor MCP (`graft_find_code`, `graft_file_api`, `graft_trace_calls`, `graft_find_all`, `graft_repo_map`, `graft_check_freshness`).
+- Cada consulta refresca el grafo contra el working tree (~3 ms si no cambió nada), así que no hay índice desactualizado que mantener.
+
+## Instalación (una vez por máquina)
+
+```bash
+npm install -g @nanonets/graft@0.19.0   # Node >= 20
+graft telemetry disable                 # §9.5
+```
+
+## Conectar un repositorio
+
+```bash
+graft init --agents claude --no-global --dry-run   # revisar qué escribe
+graft init --agents claude --no-global
+git add .claude .mcp.json .ignore .gitignore
+git commit -m "chore: wire in graft (RULES.md §9)"
+```
+
+`--no-global` evita escribir en `~/.claude` / `~/.codex`. Para otros agentes: `--agents claude agents cursor` (ids: `graft init --list-agents`).
+
+`bootstrap-project.sh` ejecuta este paso si `graft` está en el `PATH`.
+
+## Qué se versiona y qué no
+
+| Ruta | Versionar | Nota |
+|------|-----------|------|
+| `.claude/settings.json` | Sí | `init` fusiona sus bloques; no pisa lo existente |
+| `.claude/helpers/graft-*.cjs` | Sí | Shims. Contienen la ruta de instalación global de la máquina que corrió `init`; en otras máquinas resuelven el paquete con `npm root -g` |
+| `.claude/skills/graft/SKILL.md` | Sí | Skill para Claude Code |
+| `.mcp.json` | Sí | Registra el servidor MCP (`graft mcp`) |
+| `.ignore` | Sí | Mantiene `graft/` visible para ripgrep aunque esté en `.gitignore` |
+| `graft/` | **No** | Caché local; cada colaborador corre `graft build` |
+
+## Uso diario
+
+```bash
+graft ask "¿dónde se valida el token?"      # nodos rankeados con file:line
+graft callers audit_project -d 2             # quién depende de un símbolo
+graft map                                    # orientación del repo
+graft blast --base origin/main --format markdown   # radio de impacto de un PR (§9.6)
+graft check                                  # exit 1 si el grafo se desvió del código
+```
+
+## Capa LLM (opcional)
+
+`graft build --deep` agrega resúmenes por archivo y nodos conceptuales, y para eso envía el código al proveedor configurado. Solo se usa con un proveedor autorizado para el código del proyecto y con la key por entorno (`GRAFT_PROVIDER`, `GRAFT_API_KEY`, `GRAFT_MODEL`), nunca versionada (§6.4).
+
+## Relación con otros estándares
+
+- **`contexto_proyecto.md` (§5.10):** es un volcado estático y portable a cualquier LLM. Graft es un índice vivo para la sesión del agente. Se mantienen los dos, y el generador de contexto excluye `graft/`.
+- **Auditoría (§5.7):** `check_graft()` exige el skill o la entrada `graft` en `.mcp.json`, y `/graft/` en `.gitignore`.
+
+## Desinstalar
+
+```bash
+graft uninstall -y --no-global
+```
 ````
 
 ## Ruta: `wiki/Home.md`
@@ -20251,7 +20796,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 
 | Artefacto | Rol |
 |-----------|-----|
-| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§8) |
+| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§9) |
 | [docs/code-standards.md](../docs/code-standards.md) | Nomenclatura, lint, testing, review |
 | [docs/commit-conventions.md](../docs/commit-conventions.md) | Conventional Commits, branches, PRs |
 | `scripts/bootstrap-project.sh` | Scaffold obligatorio de un repo nuevo (§5.6) |
@@ -20277,6 +20822,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | [Operations](Operations.md) | Cómo correr la auditoría, el escaneo de secretos, baseline y CI |
 | [Compute](Compute.md) | Cómputo local vs. web: los 5 backends (local/colab/cloud-api/cloud-serverless/modal) y cómo elegir uno por proyecto |
 | [Dashboards](Dashboards.md) | Estética y revisión de dashboards con `apple-design-skill` (Apple HIG), checklist e instalación (§8) |
+| [Graft](Graft.md) | Grafo de contexto del código para agentes: instalación, wiring, qué se versiona, uso y telemetría (§9) |
 
 ## Regla de actualización
 
@@ -20319,6 +20865,10 @@ El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` 
 ```bash
 python scripts/generate-contexto.py
 ```
+
+### Check de Graft (§9)
+
+`check_graft()` exige `.claude/skills/graft/SKILL.md` o una entrada `graft` en `mcpServers` de `.mcp.json`, y `/graft/` en `.gitignore` para que el caché no se versione. No valida la versión instalada ni que el grafo esté actualizado; para eso, `graft check` en local.
 
 ### Check de escaneo de secretos (§6)
 
