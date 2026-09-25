@@ -15509,6 +15509,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- RULES.md §3.4: repositories with a web UI run the `/fix` performance skill (measure first,
+  then hidden reloads, non-Latin-1 regex hot paths, typing re-render storms, costly `:has()`,
+  late layout shifts, repeated work) once initial development is done and before the first
+  release, and again on slowness symptoms; agents must suggest it. Bootstrap next-steps and
+  `wiki/Getting-Started.md` mention it.
 - RULES.md §8 (Estética de Dashboards): every dashboard is designed and reviewed with
   [`dickwu/apple-design-skill`](https://github.com/dickwu/apple-design-skill) (Apple HIG), pinned to
   commit `39ea3fb`, installed per project rather than vendored (Apple-owned text, no upstream license).
@@ -16973,6 +16978,7 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
 *   **3.1. Procesamiento Cero en Disco (Zero Disk I/O):** Priorizar el procesamiento y la indexaci¾n de contenidos pesados (como parsers XML complejos o benchmarks P2P) directamente en memoria RAM o mediante flujos de *streaming*, evitando la escritura innecesaria de archivos temporales en disco.
 *   **3.2. AsincronÝa y Tareas No Bloqueantes:** Ejecutar tareas de inicializaci¾n pesadas (verificaci¾n de dependencias, impresiones de metadatos o diagn¾sticos) en hilos independientes o de manera asÝncrona para no bloquear el arranque de la aplicaci¾n.
 *   **3.3. Estrategias de CachÚ Multinivel:** Implementar sistemas de cachÚ hÝbridos combinando almacenamiento volßtil en memoria (LRU) con persistencia externa (Redis, IndexedDB) aplicando polÝticas estrictas de expiraci¾n por TTL para minimizar llamadas repetitivas y latencias.
+*   **3.4. Pasada de Rendimiento al Cerrar el Desarrollo Inicial (`/fix`):** Todo repositorio con interfaz web (app, dashboard, SPA, página servida) debe pasar por el skill `/fix` al terminar su desarrollo inicial, es decir, cuando existe una primera versión usable de punta a punta y antes de publicar su primer release (`1.0.0` o el primer despliegue a usuarios). También se repite ante síntomas de lentitud: carga lenta, congelamientos, lag al tipear, recargas espontáneas o saltos de layout. El agente que cierre el desarrollo inicial **debe sugerir** ejecutar `/fix`. El skill trabaja en este orden: (1) medir primero, con una línea base p75 sobre 2–3 tiempos que el usuario percibe (carga hasta que la página es usable, del tecleo al eco, del envío al render), agregando un script de benchmark si no existe; (2) buscar recargas ocultas (`location.reload`, asignaciones a `window.location`, refrescos duros del router, loops de reintento); (3) texto fuera de Latin-1 en hot paths con regex (resaltado, markdown, búsqueda, diff); (4) tormentas de re-render al tipear; (5) CSS costoso (`:has()` sobre `:root` o contenedores grandes); (6) layout shifts tardíos; (7) trabajo repetido en un mismo camino. Cada hallazgo se reporta con archivo, evidencia, fix y cambio medido (antes/después), y se corrige de a uno. Un cambio que no mueve los números se revierte. El reporte se adjunta al PR o release correspondiente. No aplica a repos sin interfaz web (CLI, librerías, scripts).
 
 ---
 
@@ -18367,6 +18373,7 @@ echo "   → Regenera contexto_proyecto.md si cambia código o configuración (p
 echo "   → Revisa config.yaml y .env.example"
 echo "   → Añade tests en tests/ y código en src/"
 echo "   → Haz commit y push; CI se activará automáticamente"
+echo "   → Con interfaz web: al cerrar el desarrollo inicial, corre /fix antes del primer release (RULES.md §3.4)"
 ```
 
 ## Ruta: `scripts/check-secrets.py`
@@ -19969,7 +19976,7 @@ graph TD
 |---------|------|
 | §1 | SSoT, registry, modelos híbridos, memoria de agentes, esquemas flexibles |
 | §2 | Retry/backoff, fallback multi-modelo, BD local, puertos |
-| §3 | Zero-disk I/O, async, caché multinivel |
+| §3 | Zero-disk I/O, async, caché multinivel, pasada de rendimiento `/fix` al cerrar el desarrollo inicial |
 | §4 | Clasificación de errores, evidencia, `status.json` |
 | §5 | SemVer, CHANGELOG, higiene, pins, README, bootstrap, auditoría, descripción, Wiki, contexto LLM |
 | §6 | Prohibición de secretos hardcodeados, escaneo automatizado, falsos positivos, `.env` |
@@ -20204,6 +20211,7 @@ Después del scaffold:
 3. Poner la descripción del hosting en inglés, ≤350 caracteres, alineada al README (§5.8).
 4. Añadir código en `src/` y tests en `tests/`.
 5. Regenerar `contexto_proyecto.md` (`python scripts/generate-contexto.py`) en el mismo cambio que toque código, configuración o documentación normativa (§5.10).
+6. Si el proyecto tiene interfaz web: al cerrar el desarrollo inicial (primera versión usable de punta a punta, antes del primer release), correr `/fix` para medir y corregir los caminos lentos. Adjuntar el reporte, con los números de antes y después, al PR o al release (§3.4).
 
 ## Adoptar en un repo que ya existe
 

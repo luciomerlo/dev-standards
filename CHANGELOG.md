@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- RULES.md §3.4: repositories with a web UI run the `/fix` performance skill (measure first,
+  then hidden reloads, non-Latin-1 regex hot paths, typing re-render storms, costly `:has()`,
+  late layout shifts, repeated work) once initial development is done and before the first
+  release, and again on slowness symptoms; agents must suggest it. Bootstrap next-steps and
+  `wiki/Getting-Started.md` mention it.
 - RULES.md §8 (Estética de Dashboards): every dashboard is designed and reviewed with
   [`dickwu/apple-design-skill`](https://github.com/dickwu/apple-design-skill) (Apple HIG), pinned to
   commit `39ea3fb`, installed per project rather than vendored (Apple-owned text, no upstream license).

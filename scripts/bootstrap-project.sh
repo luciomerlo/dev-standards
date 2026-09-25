@@ -856,3 +856,4 @@ echo "   → Regenera contexto_proyecto.md si cambia código o configuración (p
 echo "   → Revisa config.yaml y .env.example"
 echo "   → Añade tests en tests/ y código en src/"
 echo "   → Haz commit y push; CI se activará automáticamente"
+echo "   → Con interfaz web: al cerrar el desarrollo inicial, corre /fix antes del primer release (RULES.md §3.4)"

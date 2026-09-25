@@ -39,7 +39,7 @@ graph TD
 |---------|------|
 | §1 | SSoT, registry, modelos híbridos, memoria de agentes, esquemas flexibles |
 | §2 | Retry/backoff, fallback multi-modelo, BD local, puertos |
-| §3 | Zero-disk I/O, async, caché multinivel |
+| §3 | Zero-disk I/O, async, caché multinivel, pasada de rendimiento `/fix` al cerrar el desarrollo inicial |
 | §4 | Clasificación de errores, evidencia, `status.json` |
 | §5 | SemVer, CHANGELOG, higiene, pins, README, bootstrap, auditoría, descripción, Wiki, contexto LLM |
 | §6 | Prohibición de secretos hardcodeados, escaneo automatizado, falsos positivos, `.env` |
