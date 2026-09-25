@@ -10,6 +10,7 @@ y valida la presencia de:
   - Versión SemVer en manifiesto (package.json, pyproject.toml, Cargo.toml, go.mod, setup.py)
   - CHANGELOG.md (formato Keep a Changelog)
   - README.md con al menos una imagen (![...](...))
+  - Descripción no vacía de ≤350 caracteres en el manifiesto (RULES.md §5.8)
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
   - contexto_proyecto.md con la estructura de RULES.md §5.10
   - .gitignore
@@ -40,6 +41,7 @@ class ProjectAudit:
     has_semver: bool
     has_changelog: bool
     readme_has_images: bool
+    has_description: bool
     has_wiki: bool
     has_contexto: bool
     has_gitignore: bool
@@ -119,6 +121,27 @@ def check_readme_images(project_path: Path) -> bool:
         return False
     txt = p.read_text(encoding="utf-8", errors="ignore")
     return bool(re.search(r"!\[.*\]\(.*\)", txt))
+
+DESCRIPTION_MAX_CHARS = 350
+
+def check_description(project_path: Path) -> bool:
+    """Verifica descripción no vacía de <=350 caracteres en el manifiesto (RULES.md §5.8)."""
+    try:
+        p = project_path / "package.json"
+        if p.is_file():
+            desc = json.loads(p.read_text(encoding="utf-8")).get("description")
+            if isinstance(desc, str) and desc.strip():
+                return len(desc.strip()) <= DESCRIPTION_MAX_CHARS
+        for f in ("pyproject.toml", "Cargo.toml"):
+            p = project_path / f
+            if p.is_file():
+                txt = p.read_text(encoding="utf-8", errors="ignore")
+                m = re.search(r'^description\s*=\s*(["\'])(.*?)\1\s*$', txt, re.MULTILINE)
+                if m and m.group(2).strip():
+                    return len(m.group(2).strip()) <= DESCRIPTION_MAX_CHARS
+    except Exception:
+        pass
+    return False
 
 REQUIRED_WIKI_PAGES = ("Home.md", "Architecture.md", "Getting-Started.md", "Operations.md")
 WIKI_MIN_CHARS = 80
@@ -223,6 +246,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
     has_semver = check_semver(project_path, lang)
     has_changelog = check_changelog(project_path)
     readme_has_images = check_readme_images(project_path)
+    has_description = check_description(project_path)
     has_wiki = check_wiki(project_path)
     has_contexto = check_contexto(project_path)
     has_gitignore = check_file_exists(project_path, ".gitignore")
@@ -237,6 +261,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_semver": 10,
         "has_changelog": 10,
         "readme_has_images": 5,
+        "has_description": 5,
         "has_wiki": 5,
         "has_contexto": 5,
         "has_gitignore": 5,
@@ -259,6 +284,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_semver": has_semver,
         "has_changelog": has_changelog,
         "readme_has_images": readme_has_images,
+        "has_description": has_description,
         "has_wiki": has_wiki,
         "has_contexto": has_contexto,
         "has_gitignore": has_gitignore,
@@ -277,6 +303,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_semver=has_semver,
         has_changelog=has_changelog,
         readme_has_images=readme_has_images,
+        has_description=has_description,
         has_wiki=has_wiki,
         has_contexto=has_contexto,
         has_gitignore=has_gitignore,
@@ -320,6 +347,7 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("SemVer", a.has_semver),
             ("CHANGELOG", a.has_changelog),
             ("README c/ imágenes", a.readme_has_images),
+            ("Descripción ≤350 (§5.8)", a.has_description),
             ("Wiki (wiki/ §5.9)", a.has_wiki),
             ("contexto_proyecto.md (§5.10)", a.has_contexto),
             (".gitignore", a.has_gitignore),

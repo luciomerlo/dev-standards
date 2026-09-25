@@ -14,6 +14,10 @@ Recorre cada subdirectorio de `--root` (ignora los que empiezan por `.`) y punt�
 
 `--fail-on-regression` sale con código 1 si algún proyecto baja de score respecto a `audit_baseline.json`.
 
+### Check de descripción (§5.8)
+
+`check_description()` exige un campo `description` no vacío de 350 caracteres como máximo en `package.json`, `pyproject.toml` o `Cargo.toml`. El bootstrap rechaza un `--desc` más largo. El campo "description" del hosting (GitHub) no se consulta: se mantiene manualmente alineado con el manifiesto y el README.
+
 ### Check de Wiki (§5.9)
 
 El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` y `Operations.md`. Cada archivo debe tener un heading Markdown y al menos 80 caracteres de contenido real.

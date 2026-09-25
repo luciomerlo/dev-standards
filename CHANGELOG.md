@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- RULES.md §5.8 audit check: `scripts/audit-standards.py` verifies a non-empty manifest
+  `description` of at most 350 characters (`package.json`, `pyproject.toml`, `Cargo.toml`);
+  `bootstrap-project.sh` rejects a longer `--desc`.
 - RULES.md §5.10: every repository must keep an up-to-date `contexto_proyecto.md` at the
   root (architecture summary plus the full text of relevant source, config, and normative
   docs) so a later LLM can read the codebase without walking the tree. Reference generator:

@@ -27,6 +27,12 @@ if [[ -z "$PROJECT_DESC" ]]; then
   PROJECT_DESC="Proyecto generado con dev-standards bootstrap"
 fi
 
+# RULES.md §5.8: descripción de máximo 350 caracteres
+if (( ${#PROJECT_DESC} > 350 )); then
+  echo "❌  --desc tiene ${#PROJECT_DESC} caracteres; el máximo es 350 (RULES.md §5.8)" >&2
+  exit 1
+fi
+
 echo "🚀  Bootstrap: $PROJECT_NAME ($LANG)"
 
 # 1) .gitignore
