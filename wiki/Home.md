@@ -1,5 +1,7 @@
 # Wiki — dev-standards
 
+_Last updated: 2026-09-25_
+
 Manual de estándares de ingeniería del ecosistema: arquitectura, resiliencia, calidad y forma de los repositorios.
 
 El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instalarlo, checklist visual). Esta Wiki es el conocimiento operativo vivo: cómo se aplican las reglas, cómo se arranca un proyecto nuevo y cómo se audita el cumplimiento.
@@ -36,4 +38,4 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 
 ## Regla de actualización
 
-Cualquier cambio que altere propósito, arquitectura, uso, operación o forma de contribuir **actualiza esta Wiki en el mismo cambio** (RULES.md §5.9). Plantillas vacías no cumplen el estándar.
+Cualquier cambio que altere propósito, arquitectura, uso, operación o forma de contribuir **actualiza esta Wiki en el mismo cambio** (RULES.md §5.9) y su fecha `_Last updated_` (§5.11). Plantillas vacías no cumplen el estándar.

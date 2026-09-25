@@ -61,7 +61,7 @@
 └── test.py
 ```
 
-- Fuera del volcado de contenido: carpetas `.git`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `LICENSE`.
+- Fuera del volcado de contenido: carpetas `.git`, `.ruff_cache`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `LICENSE`.
 
 # ARCHIVOS DEL PROYECTO
 
@@ -15508,6 +15508,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- RULES.md §5.11: `README.md` and every `wiki/` page carry `_Last updated: YYYY-MM-DD_` below the H1,
+  updated in the same change as any significant edit. `bootstrap-project.sh` stamps it,
+  `audit-standards.py` checks it (`has_last_updated`, 5 points), and this repo's README and Wiki carry it.
+- RULES.md §5.5(c): README screenshots are captured with [iris](https://github.com/brijr/iris) into
+  `docs/screenshots/`, relevant screens only. Bootstrap creates the folder and a commented iris recipe.
+- RULES.md §6.5: new projects are offered the central API key catalog of the private
+  `luciomerlo/LocalProjectsTracker` repo. Bootstrap writes `APIKEYS_MATCH=` plus every catalog key name
+  as a commented option in `.env.example` (`--apikeys-catalog`, auto-detects `../LocalProjectsTracker/APIKEYS.env`);
+  values never leave `APIKEYS.env`.
+
+### Changed
+- `generate-contexto.py`: the "Last updated" line is not taken as the project purpose.
 - RULES.md §5.10: every repository must keep an up-to-date `contexto_proyecto.md` at the
   root (architecture summary plus the full text of relevant source, config, and normative
   docs) so a later LLM can read the codebase without walking the tree. Reference generator:
@@ -16832,6 +16844,8 @@ disallow_untyped_defs = true
 ````markdown
 # dev-standards
 
+_Last updated: 2026-09-25_
+
 Estándares de ingeniería, scaffolding y auditoría automatizada para el ecosistema de proyectos de luciomerlo.
 
 ![CI](https://github.com/luciomerlo/dev-standards/actions/workflows/ci.yml/badge.svg)
@@ -16855,12 +16869,12 @@ graph TD
 
 | Archivo / carpeta | Rol |
 |---|---|
-| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7) |
+| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, capturas con iris (§5.5), "Last updated" (§5.11), catálogo de API keys (§6.5), contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7) |
 | [`contexto_proyecto.md`](contexto_proyecto.md) | Base de código consolidada para un LLM posterior (§5.10). Regenerar con `scripts/generate-contexto.py` |
 | [`docs/code-standards.md`](docs/code-standards.md) | Nomenclatura, formato, testing, checklist de revisión |
 | [`docs/commit-conventions.md`](docs/commit-conventions.md) | Convenciones de commits |
 | `scripts/bootstrap-project.sh` | Genera el scaffolding completo en un repo nuevo (README, CHANGELOG, CI, `.gitignore`, Dockerfile, `wiki/`, guardarraíl de secretos) |
-| `scripts/audit-standards.py` | Audita repos existentes contra RULES.md y genera `AUDIT_REPORT.md` con score 0-100 |
+| `scripts/audit-standards.py` | Audita repos existentes contra RULES.md (incluye la fecha "Last updated", §5.11) y genera `AUDIT_REPORT.md` con score 0-100 |
 | `scripts/generate-contexto.py` | Regenera `contexto_proyecto.md` (RULES.md §5.10) |
 | `scripts/check-secrets.py` | Bloquea commits/CI con credenciales hardcodeadas (RULES.md §6) |
 | `scripts/gpu_compute.py` | Detección de CUDA + selección de backend de cómputo (RULES.md §7) |
@@ -16902,6 +16916,8 @@ python scripts/check-secrets.py --history   # historial completo
 
 Copie `.env.example` a `.env` si va a correr los scripts con credenciales (ej. tokens de GitHub para automatizar el scaffolding).
 
+API keys en proyectos nuevos (RULES.md §6.5): `bootstrap-project.sh` escribe en `.env.example` una línea `APIKEYS_MATCH=` y todo el catálogo central de `luciomerlo/LocalProjectsTracker` como opciones comentadas (solo nombres). Si encuentra `../LocalProjectsTracker/APIKEYS.env` o se le pasa `--apikeys-catalog RUTA`, toma los nombres de ahí; si no, usa el catálogo por defecto. El `.env` se genera luego con `python main.py --target-dir <dir> --sync-apikeys` desde LocalProjectsTracker.
+
 ## Estándares aplicados (checklist visual)
 
 | Estándar (RULES.md) | Estado |
@@ -16915,6 +16931,9 @@ Copie `.env.example` a `.env` si va a correr los scripts con credenciales (ej. t
 | Wiki (`wiki/`, §5.9) | ✅ |
 | Contexto LLM (`contexto_proyecto.md`, §5.10) | ✅ |
 | Escaneo de secretos (§6) | ✅ |
+| "Last updated" en README y wiki (§5.11) | ✅ |
+| Catálogo de API keys ofrecido a proyectos nuevos (§6.5) | ✅ |
+| Capturas con iris (§5.5c) | N/A — sin UI |
 
 ## Documentación
 
@@ -16979,12 +16998,13 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
 *   **5.2. Gestión de Cambios (CHANGELOG):** Mantener un archivo `CHANGELOG.md` actualizado y estructurado en cada repositorio, documentando de forma clara los cambios bajo las categorías de *Added*, *Changed*, *Deprecated*, *Removed*, *Fixed* y *Security*. Seguir el formato [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 *   **5.3. Higiene de Repositorios y Artefactos:** Excluir explícitamente mediante `.gitignore` directorios de datos generados (`data/`, `build/`, directorios de descargas, cachés de lenguaje, entornos virtuales y archivos binarios pesados o manuales), desacoplando estrictamente el código fuente de los artefactos transitorios.
 *   **5.4. Sincronización de Dependencias y Entornos:** Versionar y fijar (*pin*) dependencias críticas de motores externos o binarios de terceros cuando se identifiquen regresiones. Especificar restricciones estrictas de versiones del entorno de ejecución (ej. campo `engines` en Node.js) alineadas con flujos de CI multiversión.
-*   **5.5. README Ilustrativo y Badges:** Cada `README.md` debe incluir: (a) badges de estado (CI, versión, licencia, cobertura), (b) al menos un diagrama de arquitectura o flujo (Mermaid renderizado como SVG/PNG), (c) capturas de pantalla o GIFs de la UI/CLI cuando aplique, y (d) sección "Estándares aplicados" con checklist visual.
+*   **5.5. README Ilustrativo y Badges:** Cada `README.md` debe incluir: (a) badges de estado (CI, versión, licencia, cobertura), (b) al menos un diagrama de arquitectura o flujo (Mermaid renderizado como SVG/PNG), (c) capturas de pantalla o GIFs de la UI/CLI cuando aplique, generadas con [iris](https://github.com/brijr/iris) (`iris --full -o docs/screenshots/ <url>`; `--size iphone` para móvil, `--dark` para tema oscuro, `--selector` para un componente) y guardadas en `docs/screenshots/`; se incluyen solo las pantallas relevantes (vista principal y flujos clave) y se regeneran cuando la UI cambie de forma visible, y (d) sección "Estándares aplicados" con checklist visual.
 *   **5.6. Scaffolding Obligatorio:** Existe un script de arranque (`scripts/bootstrap-project.sh` o equivalente) que genera en cualquier repo nuevo: `README.md` plantilla, `CHANGELOG.md` (Keep a Changelog), `pyproject.toml`/`package.json` con `version = "0.1.0"`, `.gitignore`, `Dockerfile`, `.github/workflows/ci.yml`, `.env.example`, `config.yaml` (SSoT), el directorio `wiki/` con las páginas mínimas de §5.9, y `contexto_proyecto.md` generado con `scripts/generate-contexto.py` (§5.10). Su uso es obligatorio al crear un repositorio.
 *   **5.7. Auditoría Periódica Automatizada:** Un job programado (GitHub Actions `schedule` mensual o cron externo) ejecuta `scripts/audit-standards.py` que valida: presencia de versión SemVer, CHANGELOG, README con imágenes, Wiki (`wiki/` con páginas mínimas rellenas), contexto consolidado (`contexto_proyecto.md`, §5.10), `.gitignore`, Dockerfile, CI, y cumplimiento de RULES.md §1‑4. Genera reporte en `AUDIT_REPORT.md` y abre issue si hay regresiones.
 *   **5.8. Descripción del Repositorio:** Todo repositorio debe tener una descripción (campo "description" del hosting, ej. GitHub), en inglés, de máximo 350 caracteres. Debe crearse al crear `README.md` y actualizarse cada vez que `README.md` cambie, manteniéndola alineada con el propósito vigente del proyecto.
 *   **5.9. Wiki del Repositorio:** Todo repositorio debe tener su propia Wiki, versionada en el directorio `wiki/` (Markdown compatible con GitHub Wiki). Debe crearse junto al `README.md` (bootstrap §5.6) y actualizarse en el **mismo cambio** que altere propósito, arquitectura, uso, operación o forma de contribuir. El `README.md` es la puerta de entrada; la Wiki es el conocimiento operativo vivo (onboarding, arquitectura, runbook, troubleshooting) y no puede quedar en plantillas vacías ni desactualizada respecto al código. Páginas mínimas obligatorias: `Home.md` (índice y propósito), `Architecture.md`, `Getting-Started.md`, `Operations.md`. El README debe enlazar a `wiki/Home.md`. Publicar esas páginas al Wiki tab de GitHub (`<repo>.wiki.git`) es opcional; `wiki/` en el árbol del repo es la fuente de verdad.
 *   **5.10. Contexto consolidado del proyecto (`contexto_proyecto.md`):** Tan pronto como sea posible debe existir, en la raíz, un único archivo `contexto_proyecto.md` optimizado para que un motor de LLM posterior entienda la base de código completa. En un repositorio nuevo se genera al cerrar el scaffolding (§5.6); en uno existente, en el primer cambio que toque el árbol. Se regenera en el **mismo cambio** que altere código, configuración o documentación normativa (`python scripts/generate-contexto.py`), de modo que se mantenga actualizado. La implementación de referencia es `scripts/generate-contexto.py`; el bootstrap la copia y la ejecuta. Estructura estricta: (1) `# RESUMEN Y ARQUITECTURA`, con el propósito general, el stack tecnológico (lenguajes, frameworks y dependencias principales) y un árbol de directorios y archivos relevantes, excluyendo carpetas de build, binarios y dependencias (`node_modules`, `bin`, `obj`, `.git`, `venv`, `.venv`, `dist`, `build`, `target`, `__pycache__` y equivalentes); (2) `# ARCHIVOS DEL PROYECTO`, y por cada archivo de código o configuración relevante un apartado `## Ruta:` con la ruta relativa (por ejemplo `camino/al/archivo.ext`) seguido de un bloque con el lenguaje y el **contenido completo**, sin omisiones. Los Markdown versionados que definen el sistema (README, CHANGELOG, reglas, `docs/`, `wiki/` y demás `.md` de producto) entran en ese volcado. No se incluye el propio `contexto_proyecto.md` ni salidas generadas de auditoría (`AUDIT_REPORT.md` y resúmenes CSV); esos artefactos pueden nombrarse en el árbol como excluidos.
+*   **5.11. Fecha "Last updated" en README y Wiki:** `README.md` y cada página de `wiki/` (excepto `_Sidebar.md`/`_Footer.md`) llevan, inmediatamente debajo del título H1, la línea `_Last updated: YYYY-MM-DD_` (ISO 8601). Se actualiza en el **mismo cambio** que modifique de forma significativa esa página o lo que documenta: propósito, arquitectura, instalación, uso, configuración, operación, capturas o forma de contribuir. Correcciones tipográficas o de formato no la actualizan. El bootstrap (§5.6) la genera con la fecha de creación y el auditor (§5.7) verifica su presencia.
 
 ---
 
@@ -16994,6 +17014,7 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
 *   **6.2. Escaneo Automatizado Obligatorio:** Todo repositorio debe incluir `scripts/check-secrets.py` (o equivalente), ejecutado en dos capas: (a) pre-commit hook local (`.pre-commit-config.yaml`, hook `check-secrets`) que bloquea el commit ante un patrón de secreto en el diff staged; (b) job `secret-scan` en CI (`.github/workflows/ci.yml`) que escanea tanto el árbol versionado como el historial completo (`--tree` y `--history`) en cada push y pull request. El scaffolding (`scripts/bootstrap-project.sh`, RULES.md §5.6) debe generar ambas capas en todo repositorio nuevo.
 *   **6.3. Manejo de Falsos Positivos:** Un hallazgo que no sea un secreto real se descarta agregando el marcador `# allowlist-secret` al final de la línea; no se debe deshabilitar el chequeo completo ni excluir archivos por conveniencia.
 *   **6.4. Secretos Solo por Variables de Entorno:** Todo secreto se inyecta vía `.env` (no versionado, cubierto por `.gitignore`) o gestor de secretos (vault, keyring, DPAPI). `.env.example` documenta las variables requeridas sin valores reales.
+*   **6.5. Catálogo Central de API Keys para Proyectos Nuevos:** El catálogo de API keys del ecosistema vive en el repositorio privado `luciomerlo/LocalProjectsTracker` (`APIKEYS.env` local y store cifrado; referencia en `HOWTOUSEAPIS.MD`). Todo proyecto nuevo debe recibir ese catálogo como **opciones**: el `.env.example` generado por el bootstrap (§5.6) contiene una línea `APIKEYS_MATCH=` y cada key del catálogo como comentario (`# NOMBRE=`). El proyecto elige las que usa agregándolas a `APIKEYS_MATCH` (separadas por `;`) y obtiene su `.env` con `python main.py --target-dir <dir> --sync-apikeys` desde LocalProjectsTracker. Solo los **nombres** de las keys pueden aparecer en archivos versionados; los valores nunca salen de `APIKEYS.env`/store cifrado ni se copian a otro repositorio (§6.1).
 
 ---
 
@@ -17029,6 +17050,7 @@ y valida la presencia de:
   - CHANGELOG.md (formato Keep a Changelog)
   - README.md con al menos una imagen (![...](...))
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
+  - Línea "Last updated: YYYY-MM-DD" en README.md y páginas de wiki/ (RULES.md §5.11)
   - contexto_proyecto.md con la estructura de RULES.md §5.10
   - .gitignore
   - Dockerfile
@@ -17059,6 +17081,7 @@ class ProjectAudit:
     has_changelog: bool
     readme_has_images: bool
     has_wiki: bool
+    has_last_updated: bool
     has_contexto: bool
     has_gitignore: bool
     has_dockerfile: bool
@@ -17157,6 +17180,21 @@ def check_wiki(project_path: Path) -> bool:
             return False
     return True
 
+LAST_UPDATED_RE = re.compile(r"Last updated:\s*\d{4}-\d{2}-\d{2}", re.IGNORECASE)
+
+def check_last_updated(project_path: Path) -> bool:
+    """Verifica "Last updated: YYYY-MM-DD" en README.md y cada wiki/*.md (RULES.md §5.11)."""
+    readme = project_path / "README.md"
+    if not readme.is_file():
+        return False
+    pages = [readme]
+    wiki = project_path / "wiki"
+    if wiki.is_dir():
+        pages += [p for p in sorted(wiki.glob("*.md")) if not p.name.startswith("_")]
+    return all(
+        LAST_UPDATED_RE.search(p.read_text(encoding="utf-8", errors="ignore")) for p in pages
+    )
+
 def check_contexto(project_path: Path) -> bool:
     """Verifica contexto_proyecto.md con la estructura de RULES.md §5.10."""
     p = project_path / "contexto_proyecto.md"
@@ -17242,6 +17280,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
     has_changelog = check_changelog(project_path)
     readme_has_images = check_readme_images(project_path)
     has_wiki = check_wiki(project_path)
+    has_last_updated = check_last_updated(project_path)
     has_contexto = check_contexto(project_path)
     has_gitignore = check_file_exists(project_path, ".gitignore")
     has_dockerfile = check_file_exists(project_path, "Dockerfile")
@@ -17256,6 +17295,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_changelog": 10,
         "readme_has_images": 5,
         "has_wiki": 5,
+        "has_last_updated": 5,
         "has_contexto": 5,
         "has_gitignore": 5,
         "has_dockerfile": 5,
@@ -17278,6 +17318,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_changelog": has_changelog,
         "readme_has_images": readme_has_images,
         "has_wiki": has_wiki,
+        "has_last_updated": has_last_updated,
         "has_contexto": has_contexto,
         "has_gitignore": has_gitignore,
         "has_dockerfile": has_dockerfile,
@@ -17296,6 +17337,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_changelog=has_changelog,
         readme_has_images=readme_has_images,
         has_wiki=has_wiki,
+        has_last_updated=has_last_updated,
         has_contexto=has_contexto,
         has_gitignore=has_gitignore,
         has_dockerfile=has_dockerfile,
@@ -17339,6 +17381,7 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("CHANGELOG", a.has_changelog),
             ("README c/ imágenes", a.readme_has_images),
             ("Wiki (wiki/ §5.9)", a.has_wiki),
+            ("Last updated en README/wiki (§5.11)", a.has_last_updated),
             ("contexto_proyecto.md (§5.10)", a.has_contexto),
             (".gitignore", a.has_gitignore),
             ("Dockerfile", a.has_dockerfile),
@@ -17429,6 +17472,7 @@ if __name__ == "__main__":
 #!/usr/bin/env bash
 # bootstrap-project.sh — Scaffolding estándar para nuevos repositorios (RULES.md §5.6)
 # Uso:  bash bootstrap-project.sh [--lang python|node|go|rust] [--name "Mi Proyecto"] [--desc "Descripción breve"]
+#                                 [--apikeys-catalog RUTA/APIKEYS.env]
 #       Se ejecuta DENTRO de la carpeta del nuevo repo (git init ya hecho).
 
 set -euo pipefail
@@ -17437,12 +17481,16 @@ LANG="python"
 PROJECT_NAME=""
 PROJECT_DESC=""
 REPO_ROOT="$(pwd)"
+TODAY="$(date +%Y-%m-%d)"   # RULES.md §5.11: fecha "Last updated" de README y wiki/
+# RULES.md §6.5: catálogo central de API keys (LocalProjectsTracker). Solo se leen NOMBRES.
+APIKEYS_CATALOG="${APIKEYS_CATALOG:-}"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --lang) LANG="$2"; shift 2 ;;
     --name) PROJECT_NAME="$2"; shift 2 ;;
     --desc) PROJECT_DESC="$2"; shift 2 ;;
+    --apikeys-catalog) APIKEYS_CATALOG="$2"; shift 2 ;;
     *) echo "Opción desconocida: $1"; exit 1 ;;
   esac
 done
@@ -17519,6 +17567,8 @@ EOF
 cat > README.md <<EOF
 # $PROJECT_NAME
 
+_Last updated: ${TODAY}_
+
 $PROJECT_DESC
 
 <!-- Badges — actualiza los enlaces a tu repo real -->
@@ -17539,6 +17589,11 @@ graph TD
   F --> G[Observabilidad]
 \`\`\`
 
+## Capturas
+
+<!-- RULES.md §5.5(c): capturas generadas con iris (https://github.com/brijr/iris), guardadas en docs/screenshots/.
+     iris --full -o docs/screenshots/ http://localhost:8080
+     Luego reemplazar este comentario por: ![Pantalla principal](docs/screenshots/<archivo>.png) -->
 
 ## Instalación
 
@@ -17582,6 +17637,16 @@ cp .env.example .env
 
 La configuración central vive en \`config.yaml\` (Single Source of Truth).
 
+### API keys disponibles (RULES.md §6.5)
+
+\`.env.example\` lista como opciones comentadas todas las API keys del catálogo central
+(repo privado \`luciomerlo/LocalProjectsTracker\`, ver \`HOWTOUSEAPIS.MD\`). Agregue las que use
+el proyecto a \`APIKEYS_MATCH\` y genere \`.env\` desde LocalProjectsTracker:
+
+\`\`\`bash
+python main.py --target-dir "D:\\Projects" --sync-apikeys
+\`\`\`
+
 ## Estándares aplicados (checklist visual)
 
 | Estándar (RULES.md) | Estado |
@@ -17603,6 +17668,9 @@ La configuración central vive en \`config.yaml\` (Single Source of Truth).
 | ✅ CI/CD GitHub Actions | ✅ |
 | ✅ .env.example | ✅ |
 | ✅ Wiki (\`wiki/\`, RULES.md §5.9) | ✅ |
+| ✅ "Last updated" en README y wiki (§5.11) | ✅ |
+| ✅ Capturas con iris (§5.5) | ✅ |
+| ✅ Catálogo de API keys ofrecido (§6.5) | ✅ |
 | ✅ Contexto LLM (\`contexto_proyecto.md\`, §5.10) | ✅ |
 
 ## Documentación
@@ -17817,12 +17885,35 @@ EOF
     ;;
 esac
 
-# 5) .env.example
-cat > .env.example <<'EOF'
-# Variables de entorno — copie a .env y ajuste
-# API Keys (mínimo una requerida)
-API_KEY_1=
-API_KEY_2=
+# 5) .env.example (RULES.md §6.4 / §6.5)
+# Catálogo por defecto (nombres, sin valores). Si hay un APIKEYS.env accesible, se usan sus nombres.
+DEFAULT_APIKEYS="GROQ_API_KEY OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY HF_TOKEN HUGGINGFACE_TOKEN \
+COHERE_API_KEY REPLICATE_API_TOKEN GITHUB_TOKEN YOUTUBE_API_KEY DISCOGS_TOKEN SPOTIFY_CLIENT_ID \
+SPOTIFY_CLIENT_SECRET PEXELS_API_KEY PIXABAY_API_KEY UNSPLASH_API_KEY SERPAPI_KEY"
+if [[ -z "$APIKEYS_CATALOG" ]]; then
+  for candidate in "$REPO_ROOT/../LocalProjectsTracker/APIKEYS.env" "$HOME/.localprojectstracker/APIKEYS.env"; do
+    if [[ -f "$candidate" ]]; then APIKEYS_CATALOG="$candidate"; break; fi
+  done
+fi
+if [[ -n "$APIKEYS_CATALOG" && -f "$APIKEYS_CATALOG" ]]; then
+  CATALOG_KEYS="$(grep -oE '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=' "$APIKEYS_CATALOG" \
+    | tr -d ' \t=' | sort -u | tr '\n' ' ')"
+  CATALOG_SOURCE="$APIKEYS_CATALOG"
+else
+  CATALOG_KEYS="$DEFAULT_APIKEYS"
+  CATALOG_SOURCE="catálogo por defecto de bootstrap-project.sh"
+fi
+{
+  echo "# Variables de entorno — copie a .env y ajuste (o genérelo con LocalProjectsTracker --sync-apikeys)"
+  echo "#"
+  echo "# API keys (RULES.md §6.5): catálogo central en luciomerlo/LocalProjectsTracker (HOWTOUSEAPIS.MD)."
+  echo "# Agregue a APIKEYS_MATCH (separadas por ';') las que use este proyecto. Fuente: $CATALOG_SOURCE"
+  echo "APIKEYS_MATCH="
+  echo "# Opciones disponibles:"
+  for k in $CATALOG_KEYS; do echo "# $k="; done
+  echo
+} > .env.example
+cat >> .env.example <<'EOF'
 
 # Base de datos
 DATABASE_PATH=data/app.db
@@ -18084,10 +18175,15 @@ repos:
         always_run: true
 EOF
 
+# 9a) Carpeta de capturas (RULES.md §5.5c, iris)
+mkdir -p docs/screenshots && touch docs/screenshots/.gitkeep
+
 # 9b) Wiki del repositorio (RULES.md §5.9)
 mkdir -p wiki
 cat > wiki/Home.md <<EOF
 # $PROJECT_NAME
+
+_Last updated: ${TODAY}_
 
 $PROJECT_DESC
 
@@ -18107,6 +18203,8 @@ EOF
 
 cat > wiki/Architecture.md <<EOF
 # Architecture — $PROJECT_NAME
+
+_Last updated: ${TODAY}_
 
 ## Propósito
 
@@ -18137,6 +18235,8 @@ EOF
 
 cat > wiki/Getting-Started.md <<EOF
 # Getting Started — $PROJECT_NAME
+
+_Last updated: ${TODAY}_
 
 ## Requisitos
 
@@ -18183,6 +18283,8 @@ EOF
 
 cat > wiki/Operations.md <<EOF
 # Operations — $PROJECT_NAME
+
+_Last updated: ${TODAY}_
 
 ## Entorno
 
@@ -18261,7 +18363,8 @@ else
 fi
 
 echo "✅  Scaffold completado en $REPO_ROOT"
-echo "   → Edita README.md (badges, diagrama, capturas)"
+echo "   → Edita README.md (badges, diagrama, capturas con iris → docs/screenshots/)"
+echo "   → Elige API keys en .env.example (APIKEYS_MATCH) y corre LocalProjectsTracker --sync-apikeys"
 echo "   → Rellena wiki/ (Home, Architecture, Getting-Started, Operations)"
 echo "   → Regenera contexto_proyecto.md si cambia código o configuración (python scripts/generate-contexto.py)"
 echo "   → Revisa config.yaml y .env.example"
@@ -18660,6 +18763,10 @@ def collect(
     return files, skipped_dirs, skipped_generated, skipped_other
 
 
+# RULES.md §5.11: la línea "Last updated" no es parte del propósito.
+LAST_UPDATED_RE = re.compile(r"^[_*]*Last updated:", re.IGNORECASE)
+
+
 def first_paragraph(path: Path) -> str:
     if not path.is_file():
         return ""
@@ -18678,6 +18785,7 @@ def first_paragraph(path: Path) -> str:
             or stripped.startswith("<!--")
             or stripped.startswith("```")
             or stripped.startswith(">")
+            or LAST_UPDATED_RE.match(stripped) is not None
         )
         if structural:
             if buf:
@@ -19829,6 +19937,8 @@ if __name__ == "__main__":
 ````markdown
 # Architecture — dev-standards
 
+_Last updated: 2026-09-25_
+
 ## Propósito
 
 Este repositorio no es un producto de runtime: es el SSoT de cómo se construyen los demás repos. Las reglas viven en Markdown; el cumplimiento se materializa con un scaffold y se mide con un auditor.
@@ -19856,10 +19966,11 @@ graph TD
 ## Decisiones
 
 - **Wiki en `wiki/`, no solo el tab de GitHub.** El árbol del repo es la fuente de verdad: entra en PRs, se audita en frío y funciona sin API de GitHub. Publicar a `<repo>.wiki.git` es opcional.
-- **README vs Wiki.** README: badges, diagrama, instalación, checklist. Wiki: onboarding, diseño, runbook. Ninguno sustituye al otro (§5.5 y §5.9).
+- **README vs Wiki.** README: badges, diagrama, instalación, checklist. Wiki: onboarding, diseño, runbook. Ninguno sustituye al otro (§5.5 y §5.9). Ambos declaran `_Last updated: YYYY-MM-DD_` bajo el título y se fechan en el mismo cambio que los altere de forma significativa (§5.11). Las capturas del README se generan con [iris](https://github.com/brijr/iris) (§5.5c).
 - **Contexto para un LLM.** `contexto_proyecto.md` es el volcado de la base de código (resumen más contenido completo). Se regenera con `scripts/generate-contexto.py` en el mismo cambio que altere código, configuración o documentación normativa (§5.10). No reemplaza al README ni a la Wiki.
 - **Una sola configuración de dominio.** `config.yaml` es el SSoT de parámetros; no se copian listas ni taxonomías entre módulos (§1.1).
 - **Secretos: nunca en el árbol, siempre escaneados.** `scripts/check-secrets.py` corre en pre-commit y en CI (árbol + historial completo); un falso positivo se descarta con `# allowlist-secret`, nunca deshabilitando el chequeo (§6).
+- **API keys: catálogo central, solo nombres.** Los valores viven en el repo privado `luciomerlo/LocalProjectsTracker` (`APIKEYS.env`/store cifrado). Cada proyecto nuevo recibe los nombres como opciones en `.env.example` (`APIKEYS_MATCH`) y su `.env` se genera con `--sync-apikeys` (§6.5).
 - **Cómputo: local nunca se elimina, lo remoto se suma.** Todo proyecto con carga GPU opcional detecta CUDA en runtime y ofrece hasta 4 backends remotos según su tier de peso (`colab`/`cloud-api`/`cloud-serverless`/`modal`), pero `local` sigue siendo una opción disponible siempre — ver [Compute](Compute.md) (§7).
 
 ## Mapa de RULES.md
@@ -19870,8 +19981,8 @@ graph TD
 | §2 | Retry/backoff, fallback multi-modelo, BD local, puertos |
 | §3 | Zero-disk I/O, async, caché multinivel |
 | §4 | Clasificación de errores, evidencia, `status.json` |
-| §5 | SemVer, CHANGELOG, higiene, pins, README, bootstrap, auditoría, descripción, Wiki, contexto LLM |
-| §6 | Prohibición de secretos hardcodeados, escaneo automatizado, falsos positivos, `.env` |
+| §5 | SemVer, CHANGELOG, higiene, pins, README (capturas con iris), bootstrap, auditoría, descripción, Wiki, contexto LLM, fecha "Last updated" |
+| §6 | Prohibición de secretos hardcodeados, escaneo automatizado, falsos positivos, `.env`, catálogo central de API keys para proyectos nuevos |
 | §7 | Detección de CUDA, los 5 backends de cómputo, selección de UI/CLI, exclusión de modelos de difusión, implementación de referencia |
 ````
 
@@ -19879,6 +19990,8 @@ graph TD
 
 ```markdown
 # Compute — dev-standards
+
+_Last updated: 2026-09-25_
 
 Cómputo local (GPU/CUDA) vs. cómputo web, para todo proyecto cuya ejecución
 dependa opcionalmente de una GPU (`torch`, `tensorflow`, `demucs`, `whisper`,
@@ -19997,11 +20110,24 @@ etc.) en vez de reimplementar la detección desde cero.
 ````markdown
 # Getting Started — dev-standards
 
+_Last updated: 2026-09-25_
+
 ## Requisitos
 
 - Bash (bootstrap) y Python 3.10+ (auditor)
 - Git inicializado en el directorio del repo nuevo (`git init` ya hecho)
 - Para adoptar en un repo existente: poder añadir archivos sin pisar los que ya están bien
+
+## Capturas con iris (§5.5c)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/brijr/iris/main/install.sh | sh   # o: cargo install iris-screenshot
+iris --full -o docs/screenshots/ http://localhost:8080          # vista principal
+iris --size iphone -o docs/screenshots/mobile.png http://localhost:8080
+iris --selector '#dashboard' --padding 24 -o docs/screenshots/dashboard.png http://localhost:8080
+```
+
+Requiere un navegador Chrome/Chromium (`--chrome RUTA` si no se autodetecta). Ejecutado como root (contenedores/CI), Chromium necesita `--no-sandbox`: usar un wrapper que lo agregue y pasarlo con `--chrome`.
 
 ## Arrancar un repositorio nuevo
 
@@ -20014,17 +20140,19 @@ bash /ruta/a/dev-standards/scripts/bootstrap-project.sh \
   --desc "Descripción breve"
 ```
 
-`--lang` acepta `python`, `node`, `go` o `rust`. Sin `--name` usa el basename del directorio.
+`--lang` acepta `python`, `node`, `go` o `rust`. Sin `--name` usa el basename del directorio. `--apikeys-catalog RUTA/APIKEYS.env` indica de dónde leer los nombres de las API keys (§6.5); sin él, busca `../LocalProjectsTracker/APIKEYS.env` y, si no existe, usa el catálogo por defecto.
 
 El script genera README, CHANGELOG, manifiesto con `0.1.0`, `.gitignore`, Dockerfile, CI, `.env.example`, `config.yaml`, `wiki/` con las cuatro páginas mínimas (§5.9) y `contexto_proyecto.md` (§5.10).
 
 Después del scaffold:
 
-1. Completar badges y capturas en `README.md`.
-2. Reescribir `wiki/` con el propósito real del proyecto (no dejar el texto genérico).
-3. Poner la descripción del hosting en inglés, ≤350 caracteres, alineada al README (§5.8).
-4. Añadir código en `src/` y tests en `tests/`.
-5. Regenerar `contexto_proyecto.md` (`python scripts/generate-contexto.py`) en el mismo cambio que toque código, configuración o documentación normativa (§5.10).
+1. Completar badges y capturas en `README.md`. Capturas con [iris](https://github.com/brijr/iris) en `docs/screenshots/` (§5.5c), solo las pantallas relevantes.
+2. Elegir API keys: agregar a `APIKEYS_MATCH` en `.env.example` las del catálogo que use el proyecto y generar `.env` con `python main.py --target-dir <dir> --sync-apikeys` desde LocalProjectsTracker (§6.5).
+3. Reescribir `wiki/` con el propósito real del proyecto (no dejar el texto genérico).
+4. Poner la descripción del hosting en inglés, ≤350 caracteres, alineada al README (§5.8).
+5. Añadir código en `src/` y tests en `tests/`.
+6. En cada cambio significativo, actualizar `_Last updated: YYYY-MM-DD_` en el README y en las páginas de `wiki/` afectadas (§5.11).
+7. Regenerar `contexto_proyecto.md` (`python scripts/generate-contexto.py`) en el mismo cambio que toque código, configuración o documentación normativa (§5.10).
 
 ## Adoptar en un repo que ya existe
 
@@ -20033,6 +20161,7 @@ No hace falta re-bootstrap si el árbol ya tiene manifiesto, CI y README. Falta 
 1. Crear `wiki/Home.md`, `Architecture.md`, `Getting-Started.md` y `Operations.md` rellenos.
 2. Enlazar `wiki/Home.md` desde el README.
 3. Añadir la fila de Wiki al checklist de estándares del README.
+4. Agregar `_Last updated: YYYY-MM-DD_` debajo del H1 del README y de cada página de `wiki/` (§5.11).
 4. Copiar `scripts/check-secrets.py`, el hook de pre-commit y el job
    `secret-scan` de CI (§6.2) — obligatorio en todo repositorio, tenga o
    no carga GPU.
@@ -20055,6 +20184,8 @@ No hace falta re-bootstrap si el árbol ya tiene manifiesto, CI y README. Falta 
 
 ```markdown
 # Wiki — dev-standards
+
+_Last updated: 2026-09-25_
 
 Manual de estándares de ingeniería del ecosistema: arquitectura, resiliencia, calidad y forma de los repositorios.
 
@@ -20092,13 +20223,15 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 
 ## Regla de actualización
 
-Cualquier cambio que altere propósito, arquitectura, uso, operación o forma de contribuir **actualiza esta Wiki en el mismo cambio** (RULES.md §5.9). Plantillas vacías no cumplen el estándar.
+Cualquier cambio que altere propósito, arquitectura, uso, operación o forma de contribuir **actualiza esta Wiki en el mismo cambio** (RULES.md §5.9) y su fecha `_Last updated_` (§5.11). Plantillas vacías no cumplen el estándar.
 ```
 
 ## Ruta: `wiki/Operations.md`
 
 ````markdown
 # Operations — dev-standards
+
+_Last updated: 2026-09-25_
 
 ## Auditoría de cumplimiento
 
@@ -20117,6 +20250,10 @@ Recorre cada subdirectorio de `--root` (ignora los que empiezan por `.`) y punt�
 ### Check de Wiki (§5.9)
 
 El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` y `Operations.md`. Cada archivo debe tener un heading Markdown y al menos 80 caracteres de contenido real.
+
+### Check de "Last updated" (§5.11)
+
+`check_last_updated()` exige la línea `Last updated: YYYY-MM-DD` en `README.md` y en cada `wiki/*.md` (excepto las que empiezan con `_`, como `_Sidebar.md`). Suma 5 puntos; un proyecto que ya lo cumplía no puede regresar por este check.
 
 ### Check de contexto para LLM (§5.10)
 
@@ -20161,6 +20298,7 @@ adopción y qué backend le toca a cada tier.
 |---------|-------------|
 | Score 100 con CHANGELOG en rojo | El check exige `## [x.y.z] - YYYY-MM-DD`; el placeholder `$(date ...)` del scaffold no cuenta |
 | Wiki en rojo | Falta `wiki/` o alguna página mínima está vacía / sin `#` heading |
+| "Last updated" en rojo | Falta `_Last updated: YYYY-MM-DD_` en el README o en alguna página de `wiki/` (§5.11) |
 | contexto_proyecto.md en rojo | Falta el archivo o no tiene las dos secciones y un `## Ruta:` (§5.10). Regenerar con `python scripts/generate-contexto.py` |
 | Regresión masiva al añadir un check | Esperado: la línea base se recalcula al correr el auditor; la primera corrida con `--fail-on-regression` fallará hasta que los repos adopten la regla |
 ````

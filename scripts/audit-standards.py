@@ -11,6 +11,7 @@ y valida la presencia de:
   - CHANGELOG.md (formato Keep a Changelog)
   - README.md con al menos una imagen (![...](...))
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
+  - Línea "Last updated: YYYY-MM-DD" en README.md y páginas de wiki/ (RULES.md §5.11)
   - contexto_proyecto.md con la estructura de RULES.md §5.10
   - .gitignore
   - Dockerfile
@@ -41,6 +42,7 @@ class ProjectAudit:
     has_changelog: bool
     readme_has_images: bool
     has_wiki: bool
+    has_last_updated: bool
     has_contexto: bool
     has_gitignore: bool
     has_dockerfile: bool
@@ -139,6 +141,21 @@ def check_wiki(project_path: Path) -> bool:
             return False
     return True
 
+LAST_UPDATED_RE = re.compile(r"Last updated:\s*\d{4}-\d{2}-\d{2}", re.IGNORECASE)
+
+def check_last_updated(project_path: Path) -> bool:
+    """Verifica "Last updated: YYYY-MM-DD" en README.md y cada wiki/*.md (RULES.md §5.11)."""
+    readme = project_path / "README.md"
+    if not readme.is_file():
+        return False
+    pages = [readme]
+    wiki = project_path / "wiki"
+    if wiki.is_dir():
+        pages += [p for p in sorted(wiki.glob("*.md")) if not p.name.startswith("_")]
+    return all(
+        LAST_UPDATED_RE.search(p.read_text(encoding="utf-8", errors="ignore")) for p in pages
+    )
+
 def check_contexto(project_path: Path) -> bool:
     """Verifica contexto_proyecto.md con la estructura de RULES.md §5.10."""
     p = project_path / "contexto_proyecto.md"
@@ -224,6 +241,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
     has_changelog = check_changelog(project_path)
     readme_has_images = check_readme_images(project_path)
     has_wiki = check_wiki(project_path)
+    has_last_updated = check_last_updated(project_path)
     has_contexto = check_contexto(project_path)
     has_gitignore = check_file_exists(project_path, ".gitignore")
     has_dockerfile = check_file_exists(project_path, "Dockerfile")
@@ -238,6 +256,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_changelog": 10,
         "readme_has_images": 5,
         "has_wiki": 5,
+        "has_last_updated": 5,
         "has_contexto": 5,
         "has_gitignore": 5,
         "has_dockerfile": 5,
@@ -260,6 +279,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_changelog": has_changelog,
         "readme_has_images": readme_has_images,
         "has_wiki": has_wiki,
+        "has_last_updated": has_last_updated,
         "has_contexto": has_contexto,
         "has_gitignore": has_gitignore,
         "has_dockerfile": has_dockerfile,
@@ -278,6 +298,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_changelog=has_changelog,
         readme_has_images=readme_has_images,
         has_wiki=has_wiki,
+        has_last_updated=has_last_updated,
         has_contexto=has_contexto,
         has_gitignore=has_gitignore,
         has_dockerfile=has_dockerfile,
@@ -321,6 +342,7 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("CHANGELOG", a.has_changelog),
             ("README c/ imágenes", a.readme_has_images),
             ("Wiki (wiki/ §5.9)", a.has_wiki),
+            ("Last updated en README/wiki (§5.11)", a.has_last_updated),
             ("contexto_proyecto.md (§5.10)", a.has_contexto),
             (".gitignore", a.has_gitignore),
             ("Dockerfile", a.has_dockerfile),

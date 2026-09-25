@@ -1,5 +1,7 @@
 # Compute — dev-standards
 
+_Last updated: 2026-09-25_
+
 Cómputo local (GPU/CUDA) vs. cómputo web, para todo proyecto cuya ejecución
 dependa opcionalmente de una GPU (`torch`, `tensorflow`, `demucs`, `whisper`,
 modelos de `transformers`, etc.). Fuente de verdad: [RULES.md §7](../RULES.md).

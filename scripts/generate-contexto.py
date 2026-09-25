@@ -273,6 +273,10 @@ def collect(
     return files, skipped_dirs, skipped_generated, skipped_other
 
 
+# RULES.md §5.11: la línea "Last updated" no es parte del propósito.
+LAST_UPDATED_RE = re.compile(r"^[_*]*Last updated:", re.IGNORECASE)
+
+
 def first_paragraph(path: Path) -> str:
     if not path.is_file():
         return ""
@@ -291,6 +295,7 @@ def first_paragraph(path: Path) -> str:
             or stripped.startswith("<!--")
             or stripped.startswith("```")
             or stripped.startswith(">")
+            or LAST_UPDATED_RE.match(stripped) is not None
         )
         if structural:
             if buf:

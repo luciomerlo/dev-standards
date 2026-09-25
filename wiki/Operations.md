@@ -1,5 +1,7 @@
 # Operations — dev-standards
 
+_Last updated: 2026-09-25_
+
 ## Auditoría de cumplimiento
 
 ```bash
@@ -17,6 +19,10 @@ Recorre cada subdirectorio de `--root` (ignora los que empiezan por `.`) y punt�
 ### Check de Wiki (§5.9)
 
 El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` y `Operations.md`. Cada archivo debe tener un heading Markdown y al menos 80 caracteres de contenido real.
+
+### Check de "Last updated" (§5.11)
+
+`check_last_updated()` exige la línea `Last updated: YYYY-MM-DD` en `README.md` y en cada `wiki/*.md` (excepto las que empiezan con `_`, como `_Sidebar.md`). Suma 5 puntos; un proyecto que ya lo cumplía no puede regresar por este check.
 
 ### Check de contexto para LLM (§5.10)
 
@@ -61,5 +67,6 @@ adopción y qué backend le toca a cada tier.
 |---------|-------------|
 | Score 100 con CHANGELOG en rojo | El check exige `## [x.y.z] - YYYY-MM-DD`; el placeholder `$(date ...)` del scaffold no cuenta |
 | Wiki en rojo | Falta `wiki/` o alguna página mínima está vacía / sin `#` heading |
+| "Last updated" en rojo | Falta `_Last updated: YYYY-MM-DD_` en el README o en alguna página de `wiki/` (§5.11) |
 | contexto_proyecto.md en rojo | Falta el archivo o no tiene las dos secciones y un `## Ruta:` (§5.10). Regenerar con `python scripts/generate-contexto.py` |
 | Regresión masiva al añadir un check | Esperado: la línea base se recalcula al correr el auditor; la primera corrida con `--fail-on-regression` fallará hasta que los repos adopten la regla |

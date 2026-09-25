@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # bootstrap-project.sh — Scaffolding estándar para nuevos repositorios (RULES.md §5.6)
 # Uso:  bash bootstrap-project.sh [--lang python|node|go|rust] [--name "Mi Proyecto"] [--desc "Descripción breve"]
+#                                 [--apikeys-catalog RUTA/APIKEYS.env]
 #       Se ejecuta DENTRO de la carpeta del nuevo repo (git init ya hecho).
 
 set -euo pipefail
@@ -9,12 +10,16 @@ LANG="python"
 PROJECT_NAME=""
 PROJECT_DESC=""
 REPO_ROOT="$(pwd)"
+TODAY="$(date +%Y-%m-%d)"   # RULES.md §5.11: fecha "Last updated" de README y wiki/
+# RULES.md §6.5: catálogo central de API keys (LocalProjectsTracker). Solo se leen NOMBRES.
+APIKEYS_CATALOG="${APIKEYS_CATALOG:-}"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --lang) LANG="$2"; shift 2 ;;
     --name) PROJECT_NAME="$2"; shift 2 ;;
     --desc) PROJECT_DESC="$2"; shift 2 ;;
+    --apikeys-catalog) APIKEYS_CATALOG="$2"; shift 2 ;;
     *) echo "Opción desconocida: $1"; exit 1 ;;
   esac
 done
@@ -91,6 +96,8 @@ EOF
 cat > README.md <<EOF
 # $PROJECT_NAME
 
+_Last updated: ${TODAY}_
+
 $PROJECT_DESC
 
 <!-- Badges — actualiza los enlaces a tu repo real -->
@@ -111,6 +118,11 @@ graph TD
   F --> G[Observabilidad]
 \`\`\`
 
+## Capturas
+
+<!-- RULES.md §5.5(c): capturas generadas con iris (https://github.com/brijr/iris), guardadas en docs/screenshots/.
+     iris --full -o docs/screenshots/ http://localhost:8080
+     Luego reemplazar este comentario por: ![Pantalla principal](docs/screenshots/<archivo>.png) -->
 
 ## Instalación
 
@@ -154,6 +166,16 @@ cp .env.example .env
 
 La configuración central vive en \`config.yaml\` (Single Source of Truth).
 
+### API keys disponibles (RULES.md §6.5)
+
+\`.env.example\` lista como opciones comentadas todas las API keys del catálogo central
+(repo privado \`luciomerlo/LocalProjectsTracker\`, ver \`HOWTOUSEAPIS.MD\`). Agregue las que use
+el proyecto a \`APIKEYS_MATCH\` y genere \`.env\` desde LocalProjectsTracker:
+
+\`\`\`bash
+python main.py --target-dir "D:\\Projects" --sync-apikeys
+\`\`\`
+
 ## Estándares aplicados (checklist visual)
 
 | Estándar (RULES.md) | Estado |
@@ -175,6 +197,9 @@ La configuración central vive en \`config.yaml\` (Single Source of Truth).
 | ✅ CI/CD GitHub Actions | ✅ |
 | ✅ .env.example | ✅ |
 | ✅ Wiki (\`wiki/\`, RULES.md §5.9) | ✅ |
+| ✅ "Last updated" en README y wiki (§5.11) | ✅ |
+| ✅ Capturas con iris (§5.5) | ✅ |
+| ✅ Catálogo de API keys ofrecido (§6.5) | ✅ |
 | ✅ Contexto LLM (\`contexto_proyecto.md\`, §5.10) | ✅ |
 
 ## Documentación
@@ -389,12 +414,35 @@ EOF
     ;;
 esac
 
-# 5) .env.example
-cat > .env.example <<'EOF'
-# Variables de entorno — copie a .env y ajuste
-# API Keys (mínimo una requerida)
-API_KEY_1=
-API_KEY_2=
+# 5) .env.example (RULES.md §6.4 / §6.5)
+# Catálogo por defecto (nombres, sin valores). Si hay un APIKEYS.env accesible, se usan sus nombres.
+DEFAULT_APIKEYS="GROQ_API_KEY OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY HF_TOKEN HUGGINGFACE_TOKEN \
+COHERE_API_KEY REPLICATE_API_TOKEN GITHUB_TOKEN YOUTUBE_API_KEY DISCOGS_TOKEN SPOTIFY_CLIENT_ID \
+SPOTIFY_CLIENT_SECRET PEXELS_API_KEY PIXABAY_API_KEY UNSPLASH_API_KEY SERPAPI_KEY"
+if [[ -z "$APIKEYS_CATALOG" ]]; then
+  for candidate in "$REPO_ROOT/../LocalProjectsTracker/APIKEYS.env" "$HOME/.localprojectstracker/APIKEYS.env"; do
+    if [[ -f "$candidate" ]]; then APIKEYS_CATALOG="$candidate"; break; fi
+  done
+fi
+if [[ -n "$APIKEYS_CATALOG" && -f "$APIKEYS_CATALOG" ]]; then
+  CATALOG_KEYS="$(grep -oE '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=' "$APIKEYS_CATALOG" \
+    | tr -d ' \t=' | sort -u | tr '\n' ' ')"
+  CATALOG_SOURCE="$APIKEYS_CATALOG"
+else
+  CATALOG_KEYS="$DEFAULT_APIKEYS"
+  CATALOG_SOURCE="catálogo por defecto de bootstrap-project.sh"
+fi
+{
+  echo "# Variables de entorno — copie a .env y ajuste (o genérelo con LocalProjectsTracker --sync-apikeys)"
+  echo "#"
+  echo "# API keys (RULES.md §6.5): catálogo central en luciomerlo/LocalProjectsTracker (HOWTOUSEAPIS.MD)."
+  echo "# Agregue a APIKEYS_MATCH (separadas por ';') las que use este proyecto. Fuente: $CATALOG_SOURCE"
+  echo "APIKEYS_MATCH="
+  echo "# Opciones disponibles:"
+  for k in $CATALOG_KEYS; do echo "# $k="; done
+  echo
+} > .env.example
+cat >> .env.example <<'EOF'
 
 # Base de datos
 DATABASE_PATH=data/app.db
@@ -656,10 +704,15 @@ repos:
         always_run: true
 EOF
 
+# 9a) Carpeta de capturas (RULES.md §5.5c, iris)
+mkdir -p docs/screenshots && touch docs/screenshots/.gitkeep
+
 # 9b) Wiki del repositorio (RULES.md §5.9)
 mkdir -p wiki
 cat > wiki/Home.md <<EOF
 # $PROJECT_NAME
+
+_Last updated: ${TODAY}_
 
 $PROJECT_DESC
 
@@ -679,6 +732,8 @@ EOF
 
 cat > wiki/Architecture.md <<EOF
 # Architecture — $PROJECT_NAME
+
+_Last updated: ${TODAY}_
 
 ## Propósito
 
@@ -709,6 +764,8 @@ EOF
 
 cat > wiki/Getting-Started.md <<EOF
 # Getting Started — $PROJECT_NAME
+
+_Last updated: ${TODAY}_
 
 ## Requisitos
 
@@ -755,6 +812,8 @@ EOF
 
 cat > wiki/Operations.md <<EOF
 # Operations — $PROJECT_NAME
+
+_Last updated: ${TODAY}_
 
 ## Entorno
 
@@ -833,7 +892,8 @@ else
 fi
 
 echo "✅  Scaffold completado en $REPO_ROOT"
-echo "   → Edita README.md (badges, diagrama, capturas)"
+echo "   → Edita README.md (badges, diagrama, capturas con iris → docs/screenshots/)"
+echo "   → Elige API keys en .env.example (APIKEYS_MATCH) y corre LocalProjectsTracker --sync-apikeys"
 echo "   → Rellena wiki/ (Home, Architecture, Getting-Started, Operations)"
 echo "   → Regenera contexto_proyecto.md si cambia código o configuración (python scripts/generate-contexto.py)"
 echo "   → Revisa config.yaml y .env.example"

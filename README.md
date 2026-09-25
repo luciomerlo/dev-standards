@@ -1,5 +1,7 @@
 # dev-standards
 
+_Last updated: 2026-09-25_
+
 Estándares de ingeniería, scaffolding y auditoría automatizada para el ecosistema de proyectos de luciomerlo.
 
 ![CI](https://github.com/luciomerlo/dev-standards/actions/workflows/ci.yml/badge.svg)
@@ -23,12 +25,12 @@ graph TD
 
 | Archivo / carpeta | Rol |
 |---|---|
-| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7) |
+| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, capturas con iris (§5.5), "Last updated" (§5.11), catálogo de API keys (§6.5), contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7) |
 | [`contexto_proyecto.md`](contexto_proyecto.md) | Base de código consolidada para un LLM posterior (§5.10). Regenerar con `scripts/generate-contexto.py` |
 | [`docs/code-standards.md`](docs/code-standards.md) | Nomenclatura, formato, testing, checklist de revisión |
 | [`docs/commit-conventions.md`](docs/commit-conventions.md) | Convenciones de commits |
 | `scripts/bootstrap-project.sh` | Genera el scaffolding completo en un repo nuevo (README, CHANGELOG, CI, `.gitignore`, Dockerfile, `wiki/`, guardarraíl de secretos) |
-| `scripts/audit-standards.py` | Audita repos existentes contra RULES.md y genera `AUDIT_REPORT.md` con score 0-100 |
+| `scripts/audit-standards.py` | Audita repos existentes contra RULES.md (incluye la fecha "Last updated", §5.11) y genera `AUDIT_REPORT.md` con score 0-100 |
 | `scripts/generate-contexto.py` | Regenera `contexto_proyecto.md` (RULES.md §5.10) |
 | `scripts/check-secrets.py` | Bloquea commits/CI con credenciales hardcodeadas (RULES.md §6) |
 | `scripts/gpu_compute.py` | Detección de CUDA + selección de backend de cómputo (RULES.md §7) |
@@ -70,6 +72,8 @@ python scripts/check-secrets.py --history   # historial completo
 
 Copie `.env.example` a `.env` si va a correr los scripts con credenciales (ej. tokens de GitHub para automatizar el scaffolding).
 
+API keys en proyectos nuevos (RULES.md §6.5): `bootstrap-project.sh` escribe en `.env.example` una línea `APIKEYS_MATCH=` y todo el catálogo central de `luciomerlo/LocalProjectsTracker` como opciones comentadas (solo nombres). Si encuentra `../LocalProjectsTracker/APIKEYS.env` o se le pasa `--apikeys-catalog RUTA`, toma los nombres de ahí; si no, usa el catálogo por defecto. El `.env` se genera luego con `python main.py --target-dir <dir> --sync-apikeys` desde LocalProjectsTracker.
+
 ## Estándares aplicados (checklist visual)
 
 | Estándar (RULES.md) | Estado |
@@ -83,6 +87,9 @@ Copie `.env.example` a `.env` si va a correr los scripts con credenciales (ej. t
 | Wiki (`wiki/`, §5.9) | ✅ |
 | Contexto LLM (`contexto_proyecto.md`, §5.10) | ✅ |
 | Escaneo de secretos (§6) | ✅ |
+| "Last updated" en README y wiki (§5.11) | ✅ |
+| Catálogo de API keys ofrecido a proyectos nuevos (§6.5) | ✅ |
+| Capturas con iris (§5.5c) | N/A — sin UI |
 
 ## Documentación
 

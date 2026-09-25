@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- RULES.md §5.11: `README.md` and every `wiki/` page carry `_Last updated: YYYY-MM-DD_` below the H1,
+  updated in the same change as any significant edit. `bootstrap-project.sh` stamps it,
+  `audit-standards.py` checks it (`has_last_updated`, 5 points), and this repo's README and Wiki carry it.
+- RULES.md §5.5(c): README screenshots are captured with [iris](https://github.com/brijr/iris) into
+  `docs/screenshots/`, relevant screens only. Bootstrap creates the folder and a commented iris recipe.
+- RULES.md §6.5: new projects are offered the central API key catalog of the private
+  `luciomerlo/LocalProjectsTracker` repo. Bootstrap writes `APIKEYS_MATCH=` plus every catalog key name
+  as a commented option in `.env.example` (`--apikeys-catalog`, auto-detects `../LocalProjectsTracker/APIKEYS.env`);
+  values never leave `APIKEYS.env`.
+
+### Changed
+- `generate-contexto.py`: the "Last updated" line is not taken as the project purpose.
 - RULES.md §5.10: every repository must keep an up-to-date `contexto_proyecto.md` at the
   root (architecture summary plus the full text of relevant source, config, and normative
   docs) so a later LLM can read the codebase without walking the tree. Reference generator:
