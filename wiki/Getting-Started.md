@@ -21,7 +21,7 @@ Requiere un navegador Chrome/Chromium (`--chrome RUTA` si no se autodetecta). Ej
 
 ## Dashboards: toggle Dark/Light (§8)
 
-Si el proyecto tiene dashboard o UI web, copiar y adaptar [`templates/theme-toggle.html`](../templates/theme-toggle.html): script inline en `<head>` (sin destello), tokens CSS por modo, `<button>` con `aria-pressed` y evento `themechange` para re-renderizar gráficos. En Streamlit/Gradio/Dash usar el theming nativo cumpliendo §8.1–8.5. Capturas del README en ambos modos:
+Proyecto nuevo con dashboard: crear con `bootstrap-project.sh --dashboard`. Declara `ui.dashboard: true` en `config.yaml` y deja el toggle de referencia en `ui/index.html`; el dashboard se construye sobre esa base. Si el dashboard llega después, cambiar `ui.dashboard` a `true` y copiar y adaptar [`templates/theme-toggle.html`](../templates/theme-toggle.html): script inline en `<head>` (sin destello), tokens CSS por modo, `<button>` con `aria-pressed` y evento `themechange` para re-renderizar gráficos. En Streamlit/Gradio/Dash usar el theming nativo cumpliendo §8.1–8.5. Capturas del README en ambos modos:
 
 ```bash
 iris -o docs/screenshots/dashboard-light.png http://localhost:8080
@@ -39,7 +39,7 @@ bash /ruta/a/dev-standards/scripts/bootstrap-project.sh \
   --desc "Descripción breve"
 ```
 
-`--lang` acepta `python`, `node`, `go` o `rust`. Sin `--name` usa el basename del directorio. `--apikeys-catalog RUTA/APIKEYS.env` indica de dónde leer los nombres de las API keys (§6.5); sin él, busca `../LocalProjectsTracker/APIKEYS.env` y, si no existe, usa el catálogo por defecto.
+`--lang` acepta `python`, `node`, `go` o `rust`. Sin `--name` usa el basename del directorio. `--dashboard` marca el proyecto como dashboard y copia el toggle Dark/Light (§8). `--apikeys-catalog RUTA/APIKEYS.env` indica de dónde leer los nombres de las API keys (§6.5); sin él, busca `../LocalProjectsTracker/APIKEYS.env` y, si no existe, usa el catálogo por defecto.
 
 El script genera README, CHANGELOG, manifiesto con `0.1.0`, `.gitignore`, Dockerfile, CI, `.env.example`, `config.yaml`, `wiki/` con las cuatro páginas mínimas (§5.9) y `contexto_proyecto.md` (§5.10).
 

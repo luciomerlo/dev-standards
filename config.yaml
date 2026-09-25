@@ -50,3 +50,9 @@ error_codes:
   NOT_FOUND: 404
   TIMEOUT: 408
   SERVER_ERROR: [500, 502, 503, 504]
+
+# RULES.md §8: declaración de UI (la lee audit-standards.py)
+ui:
+  dashboard: false
+  theme_toggle: false   # obligatorio si dashboard: true
+  default_theme: "system"

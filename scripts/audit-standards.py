@@ -12,6 +12,7 @@ y valida la presencia de:
   - README.md con al menos una imagen (![...](...))
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
   - Línea "Last updated: YYYY-MM-DD" en README.md y páginas de wiki/ (RULES.md §5.11)
+  - Toggle Dark/Light si el proyecto tiene dashboard (RULES.md §8; N/A si no tiene)
   - contexto_proyecto.md con la estructura de RULES.md §5.10
   - .gitignore
   - Dockerfile
@@ -43,6 +44,7 @@ class ProjectAudit:
     readme_has_images: bool
     has_wiki: bool
     has_last_updated: bool
+    has_theme_toggle: bool  # True también cuando no aplica (sin dashboard)
     has_contexto: bool
     has_gitignore: bool
     has_dockerfile: bool
@@ -156,6 +158,82 @@ def check_last_updated(project_path: Path) -> bool:
         LAST_UPDATED_RE.search(p.read_text(encoding="utf-8", errors="ignore")) for p in pages
     )
 
+SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "dist", "build", "target", "__pycache__"}
+UI_DIRS = ("ui", "static", "templates", "public", "web", "frontend", "dashboard")
+UI_EXT = {".html", ".js", ".mjs", ".ts", ".tsx", ".jsx", ".vue", ".svelte", ".py", ".css"}
+DASHBOARD_DEPS_RE = re.compile(
+    r"\b(streamlit|gradio|dash|panel|nicegui|react|vue|svelte|next|vite|@angular/core)\b",
+    re.IGNORECASE,
+)
+THEME_TOGGLE_RE = re.compile(
+    r"theme[-_]?toggle|toggleTheme|setTheme\(|data-theme|useColorMode|next-themes"
+    r"|dark[-_ ]?mode[-_ ]?toggle",
+    re.IGNORECASE,
+)
+
+def _iter_files(project_path: Path, limit: int = 2000):
+    count = 0
+    for f in project_path.rglob("*"):
+        if count >= limit:
+            return
+        if any(part in SKIP_DIRS for part in f.relative_to(project_path).parts):
+            continue
+        if f.is_file():
+            count += 1
+            yield f
+
+def detect_dashboard(project_path: Path) -> bool:
+    """Detecta si el proyecto tiene dashboard/UI web (RULES.md §8).
+
+    Primero manda la declaración `ui.dashboard` de config.yaml (la escribe el bootstrap);
+    si no existe, se infiere por dependencias de UI o HTML en carpetas de interfaz.
+    """
+    cfg = project_path / "config.yaml"
+    if cfg.is_file():
+        m = re.search(
+            r"^ui:\s*\n(?:[ \t]+.*\n)*?[ \t]+dashboard:\s*(true|false)",
+            cfg.read_text(encoding="utf-8", errors="ignore"),
+            re.MULTILINE | re.IGNORECASE,
+        )
+        if m:
+            return m.group(1).lower() == "true"
+    for manifest in ("requirements.txt", "pyproject.toml", "package.json"):
+        mp = project_path / manifest
+        if mp.is_file():
+            txt = mp.read_text(encoding="utf-8", errors="ignore")
+            if manifest == "package.json":
+                try:
+                    data = json.loads(txt)
+                    txt = " ".join(
+                        list(data.get("dependencies", {})) + list(data.get("devDependencies", {}))
+                    )
+                except (json.JSONDecodeError, AttributeError):
+                    pass
+            if DASHBOARD_DEPS_RE.search(txt):
+                return True
+    return any((project_path / d).is_dir() and any((project_path / d).rglob("*.html"))
+               for d in UI_DIRS)
+
+def check_theme_toggle(project_path: Path) -> tuple:
+    """Devuelve (aplica, cumple) para el toggle Dark/Light de RULES.md §8."""
+    if not detect_dashboard(project_path):
+        return False, True
+    deps = " ".join(
+        (project_path / m).read_text(encoding="utf-8", errors="ignore")
+        for m in ("requirements.txt", "pyproject.toml")
+        if (project_path / m).is_file()
+    )
+    if re.search(r"\bstreamlit\b", deps, re.IGNORECASE):
+        return True, True  # Streamlit trae el selector Light/Dark nativo (Settings → Theme)
+    for f in _iter_files(project_path):
+        if f.suffix in UI_EXT:
+            try:
+                if THEME_TOGGLE_RE.search(f.read_text(encoding="utf-8", errors="ignore")):
+                    return True, True
+            except OSError:
+                continue
+    return True, False
+
 def check_contexto(project_path: Path) -> bool:
     """Verifica contexto_proyecto.md con la estructura de RULES.md §5.10."""
     p = project_path / "contexto_proyecto.md"
@@ -242,6 +320,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
     readme_has_images = check_readme_images(project_path)
     has_wiki = check_wiki(project_path)
     has_last_updated = check_last_updated(project_path)
+    has_dashboard, has_theme_toggle = check_theme_toggle(project_path)
     has_contexto = check_contexto(project_path)
     has_gitignore = check_file_exists(project_path, ".gitignore")
     has_dockerfile = check_file_exists(project_path, "Dockerfile")
@@ -257,6 +336,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "readme_has_images": 5,
         "has_wiki": 5,
         "has_last_updated": 5,
+        "has_theme_toggle": 5,
         "has_contexto": 5,
         "has_gitignore": 5,
         "has_dockerfile": 5,
@@ -280,6 +360,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "readme_has_images": readme_has_images,
         "has_wiki": has_wiki,
         "has_last_updated": has_last_updated,
+        "has_theme_toggle": has_theme_toggle,
         "has_contexto": has_contexto,
         "has_gitignore": has_gitignore,
         "has_dockerfile": has_dockerfile,
@@ -299,6 +380,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         readme_has_images=readme_has_images,
         has_wiki=has_wiki,
         has_last_updated=has_last_updated,
+        has_theme_toggle=has_theme_toggle,
         has_contexto=has_contexto,
         has_gitignore=has_gitignore,
         has_dockerfile=has_dockerfile,
@@ -316,7 +398,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_port_control=code_patterns["has_port_control"],
         has_db_robustness=code_patterns["has_db_robustness"],
         score=score,
-        details={"language": lang},
+        details={"language": lang, "dashboard": has_dashboard},
     )
 
 def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
@@ -343,6 +425,8 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("README c/ imágenes", a.readme_has_images),
             ("Wiki (wiki/ §5.9)", a.has_wiki),
             ("Last updated en README/wiki (§5.11)", a.has_last_updated),
+            ("Toggle Dark/Light en dashboard (§8)",
+             a.has_theme_toggle if a.details.get("dashboard") else None),
             ("contexto_proyecto.md (§5.10)", a.has_contexto),
             (".gitignore", a.has_gitignore),
             ("Dockerfile", a.has_dockerfile),
@@ -363,7 +447,8 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
         lines.append("| Check | Estado |")
         lines.append("|-------|--------|")
         for label, ok in checks:
-            lines.append(f"| {label} | {'✅' if ok else '❌'} |")
+            mark = "N/A" if ok is None else ("✅" if ok else "❌")
+            lines.append(f"| {label} | {mark} |")
         lines.append("")
         lines.append("---")
         lines.append("")

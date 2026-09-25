@@ -40,9 +40,9 @@ valida que el pre-commit hook esté instalado localmente — eso es
 responsabilidad de cada clon (`.pre-commit-config.yaml` + `pre-commit
 install`).
 
-### Dashboards (§8) — no auditado automáticamente
+### Check de toggle Dark/Light (§8)
 
-El auditor no detecta dashboards ni verifica el toggle Dark/Light; se revisa en code review contra §8.1–8.5.
+`check_theme_toggle()` primero decide si el proyecto tiene dashboard: manda `ui.dashboard` de `config.yaml`; sin esa declaración, lo infiere por dependencias de UI (Streamlit, Gradio, Dash, React, Vue, Svelte, Next, Vite, Angular) o HTML en `ui/`, `static/`, `templates/`, `public/`, `web/`, `frontend/`. Sin dashboard el check es N/A (suma los 5 puntos). Con dashboard exige un marcador de toggle en el código de UI (`theme-toggle`, `toggleTheme`, `setTheme(`, `data-theme`, `useColorMode`, `next-themes`); Streamlit pasa por su selector nativo. Verifica presencia, no calidad: §8.2–8.6 se revisan en code review.
 
 ### Cómputo (§7) — no auditado automáticamente
 
@@ -71,6 +71,7 @@ adopción y qué backend le toca a cada tier.
 |---------|-------------|
 | Score 100 con CHANGELOG en rojo | El check exige `## [x.y.z] - YYYY-MM-DD`; el placeholder `$(date ...)` del scaffold no cuenta |
 | Wiki en rojo | Falta `wiki/` o alguna página mínima está vacía / sin `#` heading |
+| Toggle Dark/Light en rojo | Proyecto con dashboard sin toggle (§8). Copiar `templates/theme-toggle.html` o usar el theming nativo del framework. Si no es dashboard, declarar `ui.dashboard: false` en `config.yaml` |
 | "Last updated" en rojo | Falta `_Last updated: YYYY-MM-DD_` en el README o en alguna página de `wiki/` (§5.11) |
 | contexto_proyecto.md en rojo | Falta el archivo o no tiene las dos secciones y un `## Ruta:` (§5.10). Regenerar con `python scripts/generate-contexto.py` |
 | Regresión masiva al añadir un check | Esperado: la línea base se recalcula al correr el auditor; la primera corrida con `--fail-on-regression` fallará hasta que los repos adopten la regla |

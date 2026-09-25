@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # bootstrap-project.sh — Scaffolding estándar para nuevos repositorios (RULES.md §5.6)
 # Uso:  bash bootstrap-project.sh [--lang python|node|go|rust] [--name "Mi Proyecto"] [--desc "Descripción breve"]
-#                                 [--apikeys-catalog RUTA/APIKEYS.env]
+#                                 [--apikeys-catalog RUTA/APIKEYS.env] [--dashboard]
+#       --dashboard: el proyecto tiene dashboard/UI web → se copia el toggle Dark/Light (RULES.md §8)
 #       Se ejecuta DENTRO de la carpeta del nuevo repo (git init ya hecho).
 
 set -euo pipefail
@@ -13,6 +14,7 @@ REPO_ROOT="$(pwd)"
 TODAY="$(date +%Y-%m-%d)"   # RULES.md §5.11: fecha "Last updated" de README y wiki/
 # RULES.md §6.5: catálogo central de API keys (LocalProjectsTracker). Solo se leen NOMBRES.
 APIKEYS_CATALOG="${APIKEYS_CATALOG:-}"
+DASHBOARD="false"   # RULES.md §8: con dashboard, el toggle Dark/Light es obligatorio
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -20,6 +22,7 @@ while [[ $# -gt 0 ]]; do
     --name) PROJECT_NAME="$2"; shift 2 ;;
     --desc) PROJECT_DESC="$2"; shift 2 ;;
     --apikeys-catalog) APIKEYS_CATALOG="$2"; shift 2 ;;
+    --dashboard) DASHBOARD="true"; shift ;;
     *) echo "Opción desconocida: $1"; exit 1 ;;
   esac
 done
@@ -200,6 +203,7 @@ python main.py --target-dir "D:\\Projects" --sync-apikeys
 | ✅ "Last updated" en README y wiki (§5.11) | ✅ |
 | ✅ Capturas con iris (§5.5) | ✅ |
 | ✅ Catálogo de API keys ofrecido (§6.5) | ✅ |
+| ✅ Toggle Dark/Light si hay dashboard (§8) | ✅ |
 | ✅ Contexto LLM (\`contexto_proyecto.md\`, §5.10) | ✅ |
 
 ## Documentación
@@ -686,6 +690,21 @@ error_codes:
   TIMEOUT: 408
   SERVER_ERROR: [500, 502, 503, 504]
 EOF
+# RULES.md §8: declaración de UI (la lee audit-standards.py). Cambiar a true si se agrega un dashboard.
+cat >> config.yaml <<EOF
+
+ui:
+  dashboard: $DASHBOARD
+  theme_toggle: $DASHBOARD      # obligatorio si dashboard: true (RULES.md §8)
+  default_theme: "system"       # system | light | dark
+EOF
+
+# 8b) Dashboard: toggle Dark/Light de referencia (RULES.md §8)
+if [[ "$DASHBOARD" == "true" ]]; then
+  mkdir -p ui
+  cp "$(dirname "${BASH_SOURCE[0]}")/../templates/theme-toggle.html" ui/index.html 2>/dev/null || \
+    curl -fsSL https://raw.githubusercontent.com/luciomerlo/dev-standards/main/templates/theme-toggle.html -o ui/index.html
+fi
 
 # 9) Escaneo de secretos: pre-commit + script (RULES.md §6)
 mkdir -p scripts
@@ -893,6 +912,12 @@ fi
 
 echo "✅  Scaffold completado en $REPO_ROOT"
 echo "   → Edita README.md (badges, diagrama, capturas con iris → docs/screenshots/)"
+if [[ "$DASHBOARD" == "true" ]]; then
+  echo "   → Construye el dashboard sobre ui/index.html manteniendo el toggle Dark/Light (RULES.md §8)"
+  echo "   → Capturas en ambos modos: iris y iris --dark → docs/screenshots/"
+else
+  echo "   → Si más adelante agregas un dashboard: ui.dashboard: true en config.yaml + toggle Dark/Light (RULES.md §8)"
+fi
 echo "   → Elige API keys en .env.example (APIKEYS_MATCH) y corre LocalProjectsTracker --sync-apikeys"
 echo "   → Rellena wiki/ (Home, Architecture, Getting-Started, Operations)"
 echo "   → Regenera contexto_proyecto.md si cambia código o configuración (python scripts/generate-contexto.py)"

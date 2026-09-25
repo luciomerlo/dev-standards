@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   toggle, default to `prefers-color-scheme`, persist the choice, use color tokens with WCAG AA contrast
   in both modes, avoid theme flash, re-theme charts, and ship README screenshots in both modes.
   Dependency-free reference implementation: `templates/theme-toggle.html`.
+- RULES.md §8.0: applies to every new project with a dashboard. `bootstrap-project.sh --dashboard` declares
+  `ui.dashboard: true` in `config.yaml` and copies the toggle to `ui/index.html`; without the flag it
+  declares `false`. `audit-standards.py` gains `has_theme_toggle` (5 points, N/A without dashboard), using
+  the `config.yaml` declaration or UI dependency/HTML detection.
 
 ### Changed
 - `generate-contexto.py`: the "Last updated" line is not taken as the project purpose.

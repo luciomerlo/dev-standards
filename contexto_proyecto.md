@@ -15523,6 +15523,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   toggle, default to `prefers-color-scheme`, persist the choice, use color tokens with WCAG AA contrast
   in both modes, avoid theme flash, re-theme charts, and ship README screenshots in both modes.
   Dependency-free reference implementation: `templates/theme-toggle.html`.
+- RULES.md §8.0: applies to every new project with a dashboard. `bootstrap-project.sh --dashboard` declares
+  `ui.dashboard: true` in `config.yaml` and copies the toggle to `ui/index.html`; without the flag it
+  declares `false`. `audit-standards.py` gains `has_theme_toggle` (5 points, N/A without dashboard), using
+  the `config.yaml` declaration or UI dependency/HTML detection.
 
 ### Changed
 - `generate-contexto.py`: the "Last updated" line is not taken as the project purpose.
@@ -15641,6 +15645,12 @@ error_codes:
   NOT_FOUND: 404
   TIMEOUT: 408
   SERVER_ERROR: [500, 502, 503, 504]
+
+# RULES.md §8: declaración de UI (la lee audit-standards.py)
+ui:
+  dashboard: false
+  theme_toggle: false   # obligatorio si dashboard: true
+  default_theme: "system"
 ```
 
 ## Ruta: `continue_index.py`
@@ -17045,13 +17055,14 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
 
 ## 8. Interfaces de Usuario y Dashboards
 
+*   **8.0. Alcance y Scaffolding:** Estándar obligatorio para todo proyecto **nuevo** que tenga dashboard o interfaz web, y para todo proyecto existente que incorpore uno. El proyecto declara su UI en `config.yaml` (`ui.dashboard: true|false`, SSoT §1.1). `bootstrap-project.sh --dashboard` crea el proyecto con `ui.dashboard: true` y copia el toggle de referencia a `ui/index.html`; sin `--dashboard` se declara `false` y, si luego se agrega un dashboard, se cambia a `true` en el mismo cambio. El auditor (§5.7) verifica el toggle en todo proyecto declarado o detectado como dashboard (dependencias Streamlit/Gradio/Dash/React/Vue/Svelte/Next/Vite/Angular o HTML en `ui/`, `static/`, `templates/`, `public/`, `web/`, `frontend/`); en los demás el check es N/A.
 *   **8.1. Toggle Dark/Light Obligatorio:** Todo dashboard o interfaz web del ecosistema incluye un toggle visible (barra superior o panel de Settings) para alternar entre modo **Dark** y **Light**. Sin elección previa del usuario, el tema inicial sigue la preferencia del sistema operativo (`prefers-color-scheme`). La elección se persiste por usuario (`localStorage` o preferencias del backend) y se respeta en visitas posteriores.
 *   **8.2. Colores como Tokens:** Los colores se definen como variables (CSS custom properties o el sistema de theming del framework: MUI, Tailwind `dark:`, Streamlit/Gradio theme, etc.) con un juego completo por modo. No se hardcodean colores en componentes. Ambos modos cumplen contraste WCAG AA (4.5:1 para texto normal).
 *   **8.3. Sin Destello de Tema:** El tema se resuelve antes del primer pintado (script inline en `<head>` o equivalente server-side) para evitar el destello del modo incorrecto al cargar.
 *   **8.4. Gráficos y Componentes Embebidos:** Gráficos (Chart.js, Plotly, ECharts, Recharts, etc.), mapas, tablas y editores embebidos cambian de tema junto con la página, sin recargar. La implementación de referencia emite el evento `themechange` para re-renderizarlos.
 *   **8.5. Accesibilidad del Toggle:** El toggle es un `<button>` operable por teclado, con `aria-label` que describe la acción y `aria-pressed` reflejando el estado.
 *   **8.6. Capturas en Ambos Modos:** Las capturas del README de un dashboard (§5.5c) incluyen la vista principal en modo claro y en modo oscuro (`iris --dark`).
-*   **8.7. Implementación de Referencia:** `templates/theme-toggle.html` (HTML/CSS/JS sin dependencias) implementa §8.1–8.5; cada proyecto la adapta a su stack. En frameworks con theming propio (Streamlit, Gradio, Dash), se usa el mecanismo nativo, siempre que cumpla §8.1–8.5.
+*   **8.7. Implementación de Referencia:** `templates/theme-toggle.html` (HTML/CSS/JS sin dependencias) implementa §8.1–8.5; cada proyecto la adapta a su stack. En frameworks con theming propio (Streamlit, Gradio, Dash), se usa el mecanismo nativo, siempre que cumpla §8.1–8.5 (el selector Light/Dark nativo de Streamlit cumple).
 ```
 
 ## Ruta: `scripts/audit-standards.py`
@@ -17071,6 +17082,7 @@ y valida la presencia de:
   - README.md con al menos una imagen (![...](...))
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
   - Línea "Last updated: YYYY-MM-DD" en README.md y páginas de wiki/ (RULES.md §5.11)
+  - Toggle Dark/Light si el proyecto tiene dashboard (RULES.md §8; N/A si no tiene)
   - contexto_proyecto.md con la estructura de RULES.md §5.10
   - .gitignore
   - Dockerfile
@@ -17102,6 +17114,7 @@ class ProjectAudit:
     readme_has_images: bool
     has_wiki: bool
     has_last_updated: bool
+    has_theme_toggle: bool  # True también cuando no aplica (sin dashboard)
     has_contexto: bool
     has_gitignore: bool
     has_dockerfile: bool
@@ -17215,6 +17228,82 @@ def check_last_updated(project_path: Path) -> bool:
         LAST_UPDATED_RE.search(p.read_text(encoding="utf-8", errors="ignore")) for p in pages
     )
 
+SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "dist", "build", "target", "__pycache__"}
+UI_DIRS = ("ui", "static", "templates", "public", "web", "frontend", "dashboard")
+UI_EXT = {".html", ".js", ".mjs", ".ts", ".tsx", ".jsx", ".vue", ".svelte", ".py", ".css"}
+DASHBOARD_DEPS_RE = re.compile(
+    r"\b(streamlit|gradio|dash|panel|nicegui|react|vue|svelte|next|vite|@angular/core)\b",
+    re.IGNORECASE,
+)
+THEME_TOGGLE_RE = re.compile(
+    r"theme[-_]?toggle|toggleTheme|setTheme\(|data-theme|useColorMode|next-themes"
+    r"|dark[-_ ]?mode[-_ ]?toggle",
+    re.IGNORECASE,
+)
+
+def _iter_files(project_path: Path, limit: int = 2000):
+    count = 0
+    for f in project_path.rglob("*"):
+        if count >= limit:
+            return
+        if any(part in SKIP_DIRS for part in f.relative_to(project_path).parts):
+            continue
+        if f.is_file():
+            count += 1
+            yield f
+
+def detect_dashboard(project_path: Path) -> bool:
+    """Detecta si el proyecto tiene dashboard/UI web (RULES.md §8).
+
+    Primero manda la declaración `ui.dashboard` de config.yaml (la escribe el bootstrap);
+    si no existe, se infiere por dependencias de UI o HTML en carpetas de interfaz.
+    """
+    cfg = project_path / "config.yaml"
+    if cfg.is_file():
+        m = re.search(
+            r"^ui:\s*\n(?:[ \t]+.*\n)*?[ \t]+dashboard:\s*(true|false)",
+            cfg.read_text(encoding="utf-8", errors="ignore"),
+            re.MULTILINE | re.IGNORECASE,
+        )
+        if m:
+            return m.group(1).lower() == "true"
+    for manifest in ("requirements.txt", "pyproject.toml", "package.json"):
+        mp = project_path / manifest
+        if mp.is_file():
+            txt = mp.read_text(encoding="utf-8", errors="ignore")
+            if manifest == "package.json":
+                try:
+                    data = json.loads(txt)
+                    txt = " ".join(
+                        list(data.get("dependencies", {})) + list(data.get("devDependencies", {}))
+                    )
+                except (json.JSONDecodeError, AttributeError):
+                    pass
+            if DASHBOARD_DEPS_RE.search(txt):
+                return True
+    return any((project_path / d).is_dir() and any((project_path / d).rglob("*.html"))
+               for d in UI_DIRS)
+
+def check_theme_toggle(project_path: Path) -> tuple:
+    """Devuelve (aplica, cumple) para el toggle Dark/Light de RULES.md §8."""
+    if not detect_dashboard(project_path):
+        return False, True
+    deps = " ".join(
+        (project_path / m).read_text(encoding="utf-8", errors="ignore")
+        for m in ("requirements.txt", "pyproject.toml")
+        if (project_path / m).is_file()
+    )
+    if re.search(r"\bstreamlit\b", deps, re.IGNORECASE):
+        return True, True  # Streamlit trae el selector Light/Dark nativo (Settings → Theme)
+    for f in _iter_files(project_path):
+        if f.suffix in UI_EXT:
+            try:
+                if THEME_TOGGLE_RE.search(f.read_text(encoding="utf-8", errors="ignore")):
+                    return True, True
+            except OSError:
+                continue
+    return True, False
+
 def check_contexto(project_path: Path) -> bool:
     """Verifica contexto_proyecto.md con la estructura de RULES.md §5.10."""
     p = project_path / "contexto_proyecto.md"
@@ -17301,6 +17390,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
     readme_has_images = check_readme_images(project_path)
     has_wiki = check_wiki(project_path)
     has_last_updated = check_last_updated(project_path)
+    has_dashboard, has_theme_toggle = check_theme_toggle(project_path)
     has_contexto = check_contexto(project_path)
     has_gitignore = check_file_exists(project_path, ".gitignore")
     has_dockerfile = check_file_exists(project_path, "Dockerfile")
@@ -17316,6 +17406,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "readme_has_images": 5,
         "has_wiki": 5,
         "has_last_updated": 5,
+        "has_theme_toggle": 5,
         "has_contexto": 5,
         "has_gitignore": 5,
         "has_dockerfile": 5,
@@ -17339,6 +17430,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "readme_has_images": readme_has_images,
         "has_wiki": has_wiki,
         "has_last_updated": has_last_updated,
+        "has_theme_toggle": has_theme_toggle,
         "has_contexto": has_contexto,
         "has_gitignore": has_gitignore,
         "has_dockerfile": has_dockerfile,
@@ -17358,6 +17450,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         readme_has_images=readme_has_images,
         has_wiki=has_wiki,
         has_last_updated=has_last_updated,
+        has_theme_toggle=has_theme_toggle,
         has_contexto=has_contexto,
         has_gitignore=has_gitignore,
         has_dockerfile=has_dockerfile,
@@ -17375,7 +17468,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_port_control=code_patterns["has_port_control"],
         has_db_robustness=code_patterns["has_db_robustness"],
         score=score,
-        details={"language": lang},
+        details={"language": lang, "dashboard": has_dashboard},
     )
 
 def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
@@ -17402,6 +17495,8 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("README c/ imágenes", a.readme_has_images),
             ("Wiki (wiki/ §5.9)", a.has_wiki),
             ("Last updated en README/wiki (§5.11)", a.has_last_updated),
+            ("Toggle Dark/Light en dashboard (§8)",
+             a.has_theme_toggle if a.details.get("dashboard") else None),
             ("contexto_proyecto.md (§5.10)", a.has_contexto),
             (".gitignore", a.has_gitignore),
             ("Dockerfile", a.has_dockerfile),
@@ -17422,7 +17517,8 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
         lines.append("| Check | Estado |")
         lines.append("|-------|--------|")
         for label, ok in checks:
-            lines.append(f"| {label} | {'✅' if ok else '❌'} |")
+            mark = "N/A" if ok is None else ("✅" if ok else "❌")
+            lines.append(f"| {label} | {mark} |")
         lines.append("")
         lines.append("---")
         lines.append("")
@@ -17492,7 +17588,8 @@ if __name__ == "__main__":
 #!/usr/bin/env bash
 # bootstrap-project.sh — Scaffolding estándar para nuevos repositorios (RULES.md §5.6)
 # Uso:  bash bootstrap-project.sh [--lang python|node|go|rust] [--name "Mi Proyecto"] [--desc "Descripción breve"]
-#                                 [--apikeys-catalog RUTA/APIKEYS.env]
+#                                 [--apikeys-catalog RUTA/APIKEYS.env] [--dashboard]
+#       --dashboard: el proyecto tiene dashboard/UI web → se copia el toggle Dark/Light (RULES.md §8)
 #       Se ejecuta DENTRO de la carpeta del nuevo repo (git init ya hecho).
 
 set -euo pipefail
@@ -17504,6 +17601,7 @@ REPO_ROOT="$(pwd)"
 TODAY="$(date +%Y-%m-%d)"   # RULES.md §5.11: fecha "Last updated" de README y wiki/
 # RULES.md §6.5: catálogo central de API keys (LocalProjectsTracker). Solo se leen NOMBRES.
 APIKEYS_CATALOG="${APIKEYS_CATALOG:-}"
+DASHBOARD="false"   # RULES.md §8: con dashboard, el toggle Dark/Light es obligatorio
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -17511,6 +17609,7 @@ while [[ $# -gt 0 ]]; do
     --name) PROJECT_NAME="$2"; shift 2 ;;
     --desc) PROJECT_DESC="$2"; shift 2 ;;
     --apikeys-catalog) APIKEYS_CATALOG="$2"; shift 2 ;;
+    --dashboard) DASHBOARD="true"; shift ;;
     *) echo "Opción desconocida: $1"; exit 1 ;;
   esac
 done
@@ -17691,6 +17790,7 @@ python main.py --target-dir "D:\\Projects" --sync-apikeys
 | ✅ "Last updated" en README y wiki (§5.11) | ✅ |
 | ✅ Capturas con iris (§5.5) | ✅ |
 | ✅ Catálogo de API keys ofrecido (§6.5) | ✅ |
+| ✅ Toggle Dark/Light si hay dashboard (§8) | ✅ |
 | ✅ Contexto LLM (\`contexto_proyecto.md\`, §5.10) | ✅ |
 
 ## Documentación
@@ -18177,6 +18277,21 @@ error_codes:
   TIMEOUT: 408
   SERVER_ERROR: [500, 502, 503, 504]
 EOF
+# RULES.md §8: declaración de UI (la lee audit-standards.py). Cambiar a true si se agrega un dashboard.
+cat >> config.yaml <<EOF
+
+ui:
+  dashboard: $DASHBOARD
+  theme_toggle: $DASHBOARD      # obligatorio si dashboard: true (RULES.md §8)
+  default_theme: "system"       # system | light | dark
+EOF
+
+# 8b) Dashboard: toggle Dark/Light de referencia (RULES.md §8)
+if [[ "$DASHBOARD" == "true" ]]; then
+  mkdir -p ui
+  cp "$(dirname "${BASH_SOURCE[0]}")/../templates/theme-toggle.html" ui/index.html 2>/dev/null || \
+    curl -fsSL https://raw.githubusercontent.com/luciomerlo/dev-standards/main/templates/theme-toggle.html -o ui/index.html
+fi
 
 # 9) Escaneo de secretos: pre-commit + script (RULES.md §6)
 mkdir -p scripts
@@ -18384,6 +18499,12 @@ fi
 
 echo "✅  Scaffold completado en $REPO_ROOT"
 echo "   → Edita README.md (badges, diagrama, capturas con iris → docs/screenshots/)"
+if [[ "$DASHBOARD" == "true" ]]; then
+  echo "   → Construye el dashboard sobre ui/index.html manteniendo el toggle Dark/Light (RULES.md §8)"
+  echo "   → Capturas en ambos modos: iris y iris --dark → docs/screenshots/"
+else
+  echo "   → Si más adelante agregas un dashboard: ui.dashboard: true en config.yaml + toggle Dark/Light (RULES.md §8)"
+fi
 echo "   → Elige API keys en .env.example (APIKEYS_MATCH) y corre LocalProjectsTracker --sync-apikeys"
 echo "   → Rellena wiki/ (Home, Architecture, Getting-Started, Operations)"
 echo "   → Regenera contexto_proyecto.md si cambia código o configuración (python scripts/generate-contexto.py)"
@@ -20257,7 +20378,7 @@ Requiere un navegador Chrome/Chromium (`--chrome RUTA` si no se autodetecta). Ej
 
 ## Dashboards: toggle Dark/Light (§8)
 
-Si el proyecto tiene dashboard o UI web, copiar y adaptar [`templates/theme-toggle.html`](../templates/theme-toggle.html): script inline en `<head>` (sin destello), tokens CSS por modo, `<button>` con `aria-pressed` y evento `themechange` para re-renderizar gráficos. En Streamlit/Gradio/Dash usar el theming nativo cumpliendo §8.1–8.5. Capturas del README en ambos modos:
+Proyecto nuevo con dashboard: crear con `bootstrap-project.sh --dashboard`. Declara `ui.dashboard: true` en `config.yaml` y deja el toggle de referencia en `ui/index.html`; el dashboard se construye sobre esa base. Si el dashboard llega después, cambiar `ui.dashboard` a `true` y copiar y adaptar [`templates/theme-toggle.html`](../templates/theme-toggle.html): script inline en `<head>` (sin destello), tokens CSS por modo, `<button>` con `aria-pressed` y evento `themechange` para re-renderizar gráficos. En Streamlit/Gradio/Dash usar el theming nativo cumpliendo §8.1–8.5. Capturas del README en ambos modos:
 
 ```bash
 iris -o docs/screenshots/dashboard-light.png http://localhost:8080
@@ -20275,7 +20396,7 @@ bash /ruta/a/dev-standards/scripts/bootstrap-project.sh \
   --desc "Descripción breve"
 ```
 
-`--lang` acepta `python`, `node`, `go` o `rust`. Sin `--name` usa el basename del directorio. `--apikeys-catalog RUTA/APIKEYS.env` indica de dónde leer los nombres de las API keys (§6.5); sin él, busca `../LocalProjectsTracker/APIKEYS.env` y, si no existe, usa el catálogo por defecto.
+`--lang` acepta `python`, `node`, `go` o `rust`. Sin `--name` usa el basename del directorio. `--dashboard` marca el proyecto como dashboard y copia el toggle Dark/Light (§8). `--apikeys-catalog RUTA/APIKEYS.env` indica de dónde leer los nombres de las API keys (§6.5); sin él, busca `../LocalProjectsTracker/APIKEYS.env` y, si no existe, usa el catálogo por defecto.
 
 El script genera README, CHANGELOG, manifiesto con `0.1.0`, `.gitignore`, Dockerfile, CI, `.env.example`, `config.yaml`, `wiki/` con las cuatro páginas mínimas (§5.9) y `contexto_proyecto.md` (§5.10).
 
@@ -20407,9 +20528,9 @@ valida que el pre-commit hook esté instalado localmente — eso es
 responsabilidad de cada clon (`.pre-commit-config.yaml` + `pre-commit
 install`).
 
-### Dashboards (§8) — no auditado automáticamente
+### Check de toggle Dark/Light (§8)
 
-El auditor no detecta dashboards ni verifica el toggle Dark/Light; se revisa en code review contra §8.1–8.5.
+`check_theme_toggle()` primero decide si el proyecto tiene dashboard: manda `ui.dashboard` de `config.yaml`; sin esa declaración, lo infiere por dependencias de UI (Streamlit, Gradio, Dash, React, Vue, Svelte, Next, Vite, Angular) o HTML en `ui/`, `static/`, `templates/`, `public/`, `web/`, `frontend/`. Sin dashboard el check es N/A (suma los 5 puntos). Con dashboard exige un marcador de toggle en el código de UI (`theme-toggle`, `toggleTheme`, `setTheme(`, `data-theme`, `useColorMode`, `next-themes`); Streamlit pasa por su selector nativo. Verifica presencia, no calidad: §8.2–8.6 se revisan en code review.
 
 ### Cómputo (§7) — no auditado automáticamente
 
@@ -20438,6 +20559,7 @@ adopción y qué backend le toca a cada tier.
 |---------|-------------|
 | Score 100 con CHANGELOG en rojo | El check exige `## [x.y.z] - YYYY-MM-DD`; el placeholder `$(date ...)` del scaffold no cuenta |
 | Wiki en rojo | Falta `wiki/` o alguna página mínima está vacía / sin `#` heading |
+| Toggle Dark/Light en rojo | Proyecto con dashboard sin toggle (§8). Copiar `templates/theme-toggle.html` o usar el theming nativo del framework. Si no es dashboard, declarar `ui.dashboard: false` en `config.yaml` |
 | "Last updated" en rojo | Falta `_Last updated: YYYY-MM-DD_` en el README o en alguna página de `wiki/` (§5.11) |
 | contexto_proyecto.md en rojo | Falta el archivo o no tiene las dos secciones y un `## Ruta:` (§5.10). Regenerar con `python scripts/generate-contexto.py` |
 | Regresión masiva al añadir un check | Esperado: la línea base se recalcula al correr el auditor; la primera corrida con `--fail-on-regression` fallará hasta que los repos adopten la regla |
