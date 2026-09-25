@@ -8,7 +8,7 @@
   - Frameworks y plataforma: Docker, GitHub Actions, pre-commit, commitlint, config.yaml como fuente única de configuración.
   - Dependencias principales: pytest>=7.4, ruff>=0.1, mypy>=1.5, pre-commit>=3.3.
 
-- Árbol de directorios y archivos relevantes (42 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
+- Árbol de directorios y archivos relevantes (43 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
 
 ```text
 .
@@ -32,6 +32,7 @@
 ├── wiki/
 │   ├── Architecture.md
 │   ├── Compute.md
+│   ├── Dashboards.md
 │   ├── Getting-Started.md
 │   ├── Home.md
 │   ├── Operations.md
@@ -15508,6 +15509,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- RULES.md §8 (Estética de Dashboards): every dashboard is designed and reviewed with
+  [`dickwu/apple-design-skill`](https://github.com/dickwu/apple-design-skill) (Apple HIG), pinned to
+  commit `39ea3fb`, installed per project rather than vendored (Apple-owned text, no upstream license).
+  PRs touching a dashboard carry the skill's review; Critical findings block merge. Adds minimums for
+  contrast, sizes, color, light/dark, charts, anti-template craft, and design tokens in the SSoT.
+  New Wiki page `wiki/Dashboards.md`.
 - RULES.md §5.8 audit check: `scripts/audit-standards.py` reads the repository's GitHub
   description via the REST API (`origin` remote; `GITHUB_TOKEN`/`GH_TOKEN` optional) and requires
   it non-empty and at most 350 characters. `bootstrap-project.sh` rejects a longer `--desc` and
@@ -16859,7 +16866,7 @@ graph TD
 
 | Archivo / carpeta | Rol |
 |---|---|
-| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7) |
+| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7), estética de dashboards con Apple HIG (§8) |
 | [`contexto_proyecto.md`](contexto_proyecto.md) | Base de código consolidada para un LLM posterior (§5.10). Regenerar con `scripts/generate-contexto.py` |
 | [`docs/code-standards.md`](docs/code-standards.md) | Nomenclatura, formato, testing, checklist de revisión |
 | [`docs/commit-conventions.md`](docs/commit-conventions.md) | Convenciones de commits |
@@ -17015,6 +17022,25 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
     *   **Interfaces CLI:** flag `--compute {local,colab,cloud-api,cloud-serverless,modal}` (limitado al subconjunto que el proyecto soporte). Default: `local` si hay CUDA disponible; si no hay CUDA y no se especificó `--compute`, el programa debe informar la ausencia y listar las alternativas en vez de intentar correr en CPU silenciosamente sobre una carga pesada.
 *   **7.4. Modelos tipo Stable Diffusion (Difusión de Imágenes):** Estos quedan **fuera del alcance de `colab`/`cloud-api`/`cloud-serverless`/`modal` de este estándar** por decisión de producto, no técnica — se gestionan aparte. Un componente de difusión dentro de un proyecto no-Stable-Diffusion (ej. un pipeline de audio que use Riffusion) debe quedar detrás de un flag explícito de opt-in, no habilitado por default.
 *   **7.5. Implementación de Referencia:** `scripts/gpu_compute.py` en este repositorio provee `detect_cuda()`, `resolve_backend()` y `colab_badge()` como base reutilizable; `scripts/run_on_modal.py` provee `call_modal_function()` para el backend `modal`; cada proyecto adapta esta base a su propia carga de trabajo en vez de reimplementar la detección desde cero.
+
+---
+
+## 8. Estética de Dashboards (Apple HIG)
+
+*   **8.1. Estándar de Referencia:** Todo dashboard, panel de control o vista de datos de un proyecto (HTML/React, Streamlit, Tauri/Electron, apps móviles, Looker Studio, Grafana o equivalente) se diseña y revisa con el skill [`dickwu/apple-design-skill`](https://github.com/dickwu/apple-design-skill), fijado al commit `39ea3fbab3011e0798c076dbeabf4917001499da` (2026-09-22). El skill contiene 123 páginas de las Human Interface Guidelines de Apple, más un lente de diseño que detecta estética de plantilla. Actualizar el pin es un cambio explícito que se registra en el CHANGELOG.
+*   **8.2. Instalación (no se vendoriza):** El texto de las guías pertenece a Apple Inc. y el repositorio del skill no declara licencia. Por eso **no se copia** a los repositorios; se instala por proyecto con `npx skills add dickwu/apple-design-skill` (usar `-a claude-code` si solo se instala para Claude Code), o se agrega como submódulo fijado en `.design-rules/` (`git submodule add https://github.com/dickwu/apple-design-skill.git .design-rules`, y luego checkout del commit de §8.1). En Claude Code queda disponible como `/apple-design`.
+*   **8.3. Revisión Obligatoria:** Todo PR que cree o modifique un dashboard incluye una revisión con el skill, en el formato de su `SKILL.md`: Summary, Critical, Improvements, Craft notes, What works, Platform notes. Cada hallazgo lleva severidad (Critical/High/Medium/Low) y cita `archivo.md › Heading`. Los hallazgos **Critical** bloquean el merge. Además del set que el skill carga siempre (`accessibility.md`, `layout.md`, `typography.md`, `color.md`, la página de plataforma y `cross-platform.md`), en dashboards se cargan `charting-data.md`, `charts.md`, `dark-mode.md` y, según lo que haya en pantalla, `gauges.md`, `lists-and-tables.md`, `sidebars.md`, `widgets.md`, `materials.md` y `loading.md`.
+*   **8.4. Alcance según Plataforma:** En dashboards web o Android aplican los ocho principios de diseño y los fundamentos (accesibilidad, color, tipografía, layout, escritura), pero no las convenciones de plataforma de Apple (tab bars, menu bar, sheets). En dashboards nativos iOS/iPadOS/macOS o empaquetados con Tauri/Electron aplican también las convenciones de plataforma.
+*   **8.5. Mínimos No Negociables** (resumen del skill; ante cualquier discrepancia prevalecen el skill y la página HIG citada):
+    *   **Contraste:** texto de hasta 17 pt, 4.5:1; texto de 18 pt o más, o en negrita, 3:1. Se calcula a partir de los valores hex y el resultado se reporta en la revisión.
+    *   **Tamaños:** texto en escritorio con default de 13 pt y mínimo de 10 pt; en móvil, default de 17 pt y mínimo de 11 pt. Controles en escritorio de 28×28 pt (mínimo 20×20); en móvil, de 44×44 pt (mínimo 28×28).
+    *   **Color:** un color significa una sola cosa en todo el dashboard. Ningún dato ni estado se comunica solo con color; se complementa con forma, patrón, etiqueta o posición. Las áreas de color contiguas (barras apiladas) llevan separadores.
+    *   **Apariencia:** el dashboard funciona en modo claro y oscuro, con colores semánticos (tokens) en lugar de valores fijos, y respeta *reduced motion*, *reduced transparency* e *increased contrast*. Los efectos de blur o vidrio solo se aplican a la capa flotante funcional (barras, paneles), nunca al contenido ni a los gráficos.
+    *   **Gráficos:** se prefieren tipos comunes (barra, línea, punto). El eje Y de un gráfico de barras parte de 0, y los rangos fijos se reservan a magnitudes con mínimo y máximo con sentido (por ejemplo, 0–100 %). Los ticks siguen secuencias familiares (0, 5, 10…). Cada gráfico lleva un título y un resumen textual de su mensaje principal, más etiquetas accesibles que describen lo que representan los datos, no su apariencia. La información crítica nunca depende de una interacción (hover, scrub) para verse.
+    *   **Consistencia:** gráficos con el mismo propósito comparten tipo, colores, anotaciones y layout. Un mismo dataset mantiene su estilo al pasar de la vista compacta a la expandida.
+    *   **Datos sin análisis:** si solo hace falta mostrar valores, sin tendencia ni comparación, se usa una tabla o lista ordenable y buscable, no un gráfico.
+*   **8.6. Punto de Vista, no Plantilla:** Siguiendo el lente de *craft* del skill, se evitan los tres looks genéricos que dominan la UI generada (crema cálido con serif y acento terracota; casi negro con un único acento ácido; retícula de líneas finas, radio cero y columnas densas), así como el "número grande sobre etiqueta chica con acento en gradiente" y los marcadores 01/02/03 sobre contenido que no es una secuencia. Cada dashboard concentra su énfasis en un solo elemento distintivo; navegación y controles usan componentes y convenciones familiares.
+*   **8.7. Tokens de Diseño:** Cada proyecto con dashboard define sus tokens en el SSoT (`config.yaml` o un archivo de tokens referenciado desde él). Como mínimo: de 4 a 6 colores con rol (superficie, contenido, acento, señal), cada uno con variante clara y oscura y su contraste declarado, y una escala tipográfica. Queda prohibido fijar colores o tamaños sueltos en los componentes (§1).
 ```
 
 ## Ruta: `scripts/audit-standards.py`
@@ -19893,6 +19919,7 @@ if __name__ == "__main__":
 * [Getting Started](Getting-Started)
 * [Operations](Operations)
 * [Compute](Compute)
+* [Dashboards](Dashboards)
 * [RULES.md](../RULES.md)
 * [README](../README.md)
 * [CHANGELOG](../CHANGELOG.md)
@@ -19947,6 +19974,7 @@ graph TD
 | §5 | SemVer, CHANGELOG, higiene, pins, README, bootstrap, auditoría, descripción, Wiki, contexto LLM |
 | §6 | Prohibición de secretos hardcodeados, escaneo automatizado, falsos positivos, `.env` |
 | §7 | Detección de CUDA, los 5 backends de cómputo, selección de UI/CLI, exclusión de modelos de difusión, implementación de referencia |
+| §8 | Estética de dashboards: `apple-design-skill` (Apple HIG) fijado por commit, revisión obligatoria en PR, mínimos de contraste/tamaño/color/gráficos, anti-plantilla, tokens |
 ````
 
 ## Ruta: `wiki/Compute.md`
@@ -20066,6 +20094,83 @@ etc.) en vez de reimplementar la detección desde cero.
    proyecto la adoptó) en el mismo cambio (RULES.md §5.9).
 ```
 
+## Ruta: `wiki/Dashboards.md`
+
+````markdown
+# Dashboards — dev-standards
+
+Estética y revisión de dashboards según RULES.md §8. El estándar es el skill [`dickwu/apple-design-skill`](https://github.com/dickwu/apple-design-skill), que revisa diseños contra las Human Interface Guidelines de Apple (123 páginas) y además aplica un lente de *craft* que detecta UI de plantilla.
+
+Commit fijado: `39ea3fbab3011e0798c076dbeabf4917001499da` (2026-09-22).
+
+## Por qué no se copia a los repos
+
+El texto de las guías es de Apple Inc. y el repositorio del skill no incluye archivo de licencia. Por eso cada proyecto lo instala o lo referencia en vez de vendorizarlo.
+
+## Instalación en un proyecto
+
+Opción A, con el CLI de skills (Claude Code, Cursor, Codex y otros agentes):
+
+```bash
+npx skills add dickwu/apple-design-skill -a claude-code
+```
+
+Opción B, como submódulo fijado (sirve para cualquier agente que lea `AGENTS.md` o archivos de reglas):
+
+```bash
+git submodule add https://github.com/dickwu/apple-design-skill.git .design-rules
+git -C .design-rules checkout 39ea3fbab3011e0798c076dbeabf4917001499da
+git add .gitmodules .design-rules
+```
+
+Con la opción B, agregar al `AGENTS.md` o `CLAUDE.md` del proyecto:
+
+```markdown
+## Revisión de dashboards (RULES.md §8)
+
+Seguir `.design-rules/SKILL.md`. Rutear temas con `.design-rules/references/hig-lookup.md` y cargar
+los `.design-rules/references/hig/*.md` relevantes antes de dar feedback de diseño.
+```
+
+## Flujo en un PR que toca un dashboard
+
+1. Pedir la revisión: en Claude Code, `/apple-design` o *"Review this dashboard against Apple's HIG"*.
+2. Además del set que el skill carga siempre, cargar `charting-data.md`, `charts.md` y `dark-mode.md`, y según lo que haya en pantalla `gauges.md`, `lists-and-tables.md`, `sidebars.md`, `widgets.md`, `materials.md` o `loading.md`.
+3. Pegar el reporte en la descripción del PR, con estas secciones: Summary, Critical, Improvements, Craft notes, What works, Platform notes.
+4. Resolver todo hallazgo **Critical** antes del merge. Los High se resuelven o se justifican en el PR.
+
+## Checklist rápido (§8.5)
+
+| Ítem | Criterio |
+|------|----------|
+| Contraste | 4.5:1 para texto de hasta 17 pt; 3:1 para ≥18 pt o negrita. Calculado a partir del hex |
+| Texto mínimo | 10 pt en escritorio, 11 pt en móvil |
+| Controles | 28×28 pt en escritorio (mínimo 20×20); 44×44 pt en móvil (mínimo 28×28) |
+| Color | Un color, un significado; nunca como único canal; separadores entre áreas contiguas |
+| Claro / oscuro | Ambos modos con tokens semánticos; *reduced motion* y *increased contrast* respetados |
+| Blur / vidrio | Solo en la capa flotante (barras, paneles), nunca sobre datos |
+| Tipo de gráfico | Barra, línea o punto salvo razón explícita; barras con eje Y desde 0 |
+| Ejes | Ticks en secuencias familiares (0, 5, 10…); grid liviano que no compita con los datos |
+| Texto | Título + resumen del mensaje principal por gráfico; etiquetas accesibles con valores reales |
+| Interacción | Nada crítico escondido detrás de hover o scrub |
+| Consistencia | Mismo propósito → mismo estilo; misma serie → mismo color en todo el dashboard |
+| Tabla vs. gráfico | Si solo se muestran valores, tabla ordenable/buscable |
+| Plantilla | Ninguno de los tres looks genéricos de §8.6; un solo elemento distintivo |
+| Tokens | 4–6 colores con rol y variante clara/oscura, y escala tipográfica, definidos en el SSoT (§8.7) |
+
+## Alcance
+
+- **Web / Android** (incluye Looker Studio, Grafana, Streamlit): principios y fundamentos. Las convenciones de plataforma de Apple no aplican.
+- **iOS / iPadOS / macOS nativo, Tauri, Electron**: todo lo anterior más las convenciones de plataforma (menu bar, sidebars, toolbars).
+- Herramientas con tema cerrado (por ejemplo, Looker Studio): se aplican los mínimos que la herramienta permita controlar (paleta, contraste, tipos de gráfico, títulos y resúmenes) y lo que no se pueda controlar se anota como limitación en la revisión.
+
+## Actualizar el pin
+
+1. Revisar los cambios upstream (`git log` del skill) y el changelog de las páginas HIG afectadas.
+2. Cambiar el commit en RULES.md §8.1 y en esta página.
+3. Registrar el cambio en `CHANGELOG.md`.
+````
+
 ## Ruta: `wiki/Getting-Started.md`
 
 ````markdown
@@ -20138,7 +20243,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 
 | Artefacto | Rol |
 |-----------|-----|
-| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§7) |
+| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§8) |
 | [docs/code-standards.md](../docs/code-standards.md) | Nomenclatura, lint, testing, review |
 | [docs/commit-conventions.md](../docs/commit-conventions.md) | Conventional Commits, branches, PRs |
 | `scripts/bootstrap-project.sh` | Scaffold obligatorio de un repo nuevo (§5.6) |
@@ -20163,6 +20268,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | [Getting Started](Getting-Started.md) | Bootstrap de un repo nuevo y adopción en uno existente |
 | [Operations](Operations.md) | Cómo correr la auditoría, el escaneo de secretos, baseline y CI |
 | [Compute](Compute.md) | Cómputo local vs. web: los 5 backends (local/colab/cloud-api/cloud-serverless/modal) y cómo elegir uno por proyecto |
+| [Dashboards](Dashboards.md) | Estética y revisión de dashboards con `apple-design-skill` (Apple HIG), checklist e instalación (§8) |
 
 ## Regla de actualización
 

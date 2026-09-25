@@ -3,6 +3,7 @@
 * [Getting Started](Getting-Started)
 * [Operations](Operations)
 * [Compute](Compute)
+* [Dashboards](Dashboards)
 * [RULES.md](../RULES.md)
 * [README](../README.md)
 * [CHANGELOG](../CHANGELOG.md)

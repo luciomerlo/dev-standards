@@ -8,7 +8,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 
 | Artefacto | Rol |
 |-----------|-----|
-| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§7) |
+| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§8) |
 | [docs/code-standards.md](../docs/code-standards.md) | Nomenclatura, lint, testing, review |
 | [docs/commit-conventions.md](../docs/commit-conventions.md) | Conventional Commits, branches, PRs |
 | `scripts/bootstrap-project.sh` | Scaffold obligatorio de un repo nuevo (§5.6) |
@@ -33,6 +33,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | [Getting Started](Getting-Started.md) | Bootstrap de un repo nuevo y adopción en uno existente |
 | [Operations](Operations.md) | Cómo correr la auditoría, el escaneo de secretos, baseline y CI |
 | [Compute](Compute.md) | Cómputo local vs. web: los 5 backends (local/colab/cloud-api/cloud-serverless/modal) y cómo elegir uno por proyecto |
+| [Dashboards](Dashboards.md) | Estética y revisión de dashboards con `apple-design-skill` (Apple HIG), checklist e instalación (§8) |
 
 ## Regla de actualización
 

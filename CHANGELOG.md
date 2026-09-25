@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- RULES.md §8 (Estética de Dashboards): every dashboard is designed and reviewed with
+  [`dickwu/apple-design-skill`](https://github.com/dickwu/apple-design-skill) (Apple HIG), pinned to
+  commit `39ea3fb`, installed per project rather than vendored (Apple-owned text, no upstream license).
+  PRs touching a dashboard carry the skill's review; Critical findings block merge. Adds minimums for
+  contrast, sizes, color, light/dark, charts, anti-template craft, and design tokens in the SSoT.
+  New Wiki page `wiki/Dashboards.md`.
 - RULES.md §5.8 audit check: `scripts/audit-standards.py` reads the repository's GitHub
   description via the REST API (`origin` remote; `GITHUB_TOKEN`/`GH_TOKEN` optional) and requires
   it non-empty and at most 350 characters. `bootstrap-project.sh` rejects a longer `--desc` and
