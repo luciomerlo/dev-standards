@@ -25,7 +25,7 @@ graph TD
 
 | Archivo / carpeta | Rol |
 |---|---|
-| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, capturas con iris (§5.5), "Last updated" (§5.11), catálogo de API keys (§6.5), contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7) |
+| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, capturas con iris (§5.5), "Last updated" (§5.11), catálogo de API keys (§6.5), toggle Dark/Light en dashboards (§8), contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7), UI y dashboards (§8) |
 | [`contexto_proyecto.md`](contexto_proyecto.md) | Base de código consolidada para un LLM posterior (§5.10). Regenerar con `scripts/generate-contexto.py` |
 | [`docs/code-standards.md`](docs/code-standards.md) | Nomenclatura, formato, testing, checklist de revisión |
 | [`docs/commit-conventions.md`](docs/commit-conventions.md) | Convenciones de commits |
@@ -39,6 +39,7 @@ graph TD
 | `scripts/run_on_modal.py` | Cliente del backend `modal` ([Modal](https://modal.com), ~$30 USD/mes gratis) |
 | `scripts/transcribe_via_groq.py` | Cliente del backend `cloud-api` para proyectos basados en Whisper (Groq) |
 | `scripts/run_on_hf_inference.py` | Cliente del backend `cloud-api` para otros modelos hospedados en HF |
+| [`templates/theme-toggle.html`](templates/theme-toggle.html) | Implementación de referencia del toggle Dark/Light para dashboards (RULES.md §8) |
 | [`wiki/`](wiki/Home.md) | Wiki operativa de este propio repo (onboarding, arquitectura, runbook) |
 
 ## Uso rápido
@@ -90,6 +91,7 @@ API keys en proyectos nuevos (RULES.md §6.5): `bootstrap-project.sh` escribe en
 | "Last updated" en README y wiki (§5.11) | ✅ |
 | Catálogo de API keys ofrecido a proyectos nuevos (§6.5) | ✅ |
 | Capturas con iris (§5.5c) | N/A — sin UI |
+| Toggle Dark/Light en dashboards (§8) | N/A — sin UI; provee `templates/theme-toggle.html` |
 
 ## Documentación
 

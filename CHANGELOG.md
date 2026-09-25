@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `luciomerlo/LocalProjectsTracker` repo. Bootstrap writes `APIKEYS_MATCH=` plus every catalog key name
   as a commented option in `.env.example` (`--apikeys-catalog`, auto-detects `../LocalProjectsTracker/APIKEYS.env`);
   values never leave `APIKEYS.env`.
+- RULES.md §8 (Interfaces de Usuario y Dashboards): every dashboard must offer a visible Dark/Light
+  toggle, default to `prefers-color-scheme`, persist the choice, use color tokens with WCAG AA contrast
+  in both modes, avoid theme flash, re-theme charts, and ship README screenshots in both modes.
+  Dependency-free reference implementation: `templates/theme-toggle.html`.
 
 ### Changed
 - `generate-contexto.py`: the "Last updated" line is not taken as the project purpose.

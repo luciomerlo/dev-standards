@@ -79,3 +79,15 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
     *   **Interfaces CLI:** flag `--compute {local,colab,cloud-api,cloud-serverless,modal}` (limitado al subconjunto que el proyecto soporte). Default: `local` si hay CUDA disponible; si no hay CUDA y no se especificó `--compute`, el programa debe informar la ausencia y listar las alternativas en vez de intentar correr en CPU silenciosamente sobre una carga pesada.
 *   **7.4. Modelos tipo Stable Diffusion (Difusión de Imágenes):** Estos quedan **fuera del alcance de `colab`/`cloud-api`/`cloud-serverless`/`modal` de este estándar** por decisión de producto, no técnica — se gestionan aparte. Un componente de difusión dentro de un proyecto no-Stable-Diffusion (ej. un pipeline de audio que use Riffusion) debe quedar detrás de un flag explícito de opt-in, no habilitado por default.
 *   **7.5. Implementación de Referencia:** `scripts/gpu_compute.py` en este repositorio provee `detect_cuda()`, `resolve_backend()` y `colab_badge()` como base reutilizable; `scripts/run_on_modal.py` provee `call_modal_function()` para el backend `modal`; cada proyecto adapta esta base a su propia carga de trabajo en vez de reimplementar la detección desde cero.
+
+---
+
+## 8. Interfaces de Usuario y Dashboards
+
+*   **8.1. Toggle Dark/Light Obligatorio:** Todo dashboard o interfaz web del ecosistema incluye un toggle visible (barra superior o panel de Settings) para alternar entre modo **Dark** y **Light**. Sin elección previa del usuario, el tema inicial sigue la preferencia del sistema operativo (`prefers-color-scheme`). La elección se persiste por usuario (`localStorage` o preferencias del backend) y se respeta en visitas posteriores.
+*   **8.2. Colores como Tokens:** Los colores se definen como variables (CSS custom properties o el sistema de theming del framework: MUI, Tailwind `dark:`, Streamlit/Gradio theme, etc.) con un juego completo por modo. No se hardcodean colores en componentes. Ambos modos cumplen contraste WCAG AA (4.5:1 para texto normal).
+*   **8.3. Sin Destello de Tema:** El tema se resuelve antes del primer pintado (script inline en `<head>` o equivalente server-side) para evitar el destello del modo incorrecto al cargar.
+*   **8.4. Gráficos y Componentes Embebidos:** Gráficos (Chart.js, Plotly, ECharts, Recharts, etc.), mapas, tablas y editores embebidos cambian de tema junto con la página, sin recargar. La implementación de referencia emite el evento `themechange` para re-renderizarlos.
+*   **8.5. Accesibilidad del Toggle:** El toggle es un `<button>` operable por teclado, con `aria-label` que describe la acción y `aria-pressed` reflejando el estado.
+*   **8.6. Capturas en Ambos Modos:** Las capturas del README de un dashboard (§5.5c) incluyen la vista principal en modo claro y en modo oscuro (`iris --dark`).
+*   **8.7. Implementación de Referencia:** `templates/theme-toggle.html` (HTML/CSS/JS sin dependencias) implementa §8.1–8.5; cada proyecto la adapta a su stack. En frameworks con theming propio (Streamlit, Gradio, Dash), se usa el mecanismo nativo, siempre que cumpla §8.1–8.5.

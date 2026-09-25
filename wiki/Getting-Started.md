@@ -19,6 +19,15 @@ iris --selector '#dashboard' --padding 24 -o docs/screenshots/dashboard.png http
 
 Requiere un navegador Chrome/Chromium (`--chrome RUTA` si no se autodetecta). Ejecutado como root (contenedores/CI), Chromium necesita `--no-sandbox`: usar un wrapper que lo agregue y pasarlo con `--chrome`.
 
+## Dashboards: toggle Dark/Light (§8)
+
+Si el proyecto tiene dashboard o UI web, copiar y adaptar [`templates/theme-toggle.html`](../templates/theme-toggle.html): script inline en `<head>` (sin destello), tokens CSS por modo, `<button>` con `aria-pressed` y evento `themechange` para re-renderizar gráficos. En Streamlit/Gradio/Dash usar el theming nativo cumpliendo §8.1–8.5. Capturas del README en ambos modos:
+
+```bash
+iris -o docs/screenshots/dashboard-light.png http://localhost:8080
+iris --dark -o docs/screenshots/dashboard-dark.png http://localhost:8080
+```
+
 ## Arrancar un repositorio nuevo
 
 Ejecutar **dentro** de la carpeta del repo:

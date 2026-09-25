@@ -16,6 +16,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | `scripts/bootstrap-project.sh` | Scaffold obligatorio de un repo nuevo (§5.6) |
 | `scripts/generate-contexto.py` | Regenera `contexto_proyecto.md`, el volcado para un LLM (§5.10) |
 | `scripts/audit-standards.py` | Auditoría periódica de cumplimiento (§5.7) |
+| `templates/theme-toggle.html` | Referencia del toggle Dark/Light para dashboards (§8) |
 | `scripts/check-secrets.py` | Escaneo de secretos, árbol + historial (§6.2) |
 | `scripts/gpu_compute.py` | Detección de CUDA, tag de estado, selección de backend (§7.1–§7.3) |
 | `scripts/make_colab_notebook.py` | Genera el notebook companion del backend `colab` (§7.2) |

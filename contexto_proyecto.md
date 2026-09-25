@@ -8,7 +8,7 @@
   - Frameworks y plataforma: Docker, GitHub Actions, pre-commit, commitlint, config.yaml como fuente única de configuración.
   - Dependencias principales: pytest>=7.4, ruff>=0.1, mypy>=1.5, pre-commit>=3.3.
 
-- Árbol de directorios y archivos relevantes (42 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
+- Árbol de directorios y archivos relevantes (43 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
 
 ```text
 .
@@ -29,6 +29,8 @@
 │   ├── run_on_modal.py
 │   ├── run_on_runpod.py
 │   └── transcribe_via_groq.py
+├── templates/
+│   └── theme-toggle.html
 ├── wiki/
 │   ├── Architecture.md
 │   ├── Compute.md
@@ -15517,6 +15519,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `luciomerlo/LocalProjectsTracker` repo. Bootstrap writes `APIKEYS_MATCH=` plus every catalog key name
   as a commented option in `.env.example` (`--apikeys-catalog`, auto-detects `../LocalProjectsTracker/APIKEYS.env`);
   values never leave `APIKEYS.env`.
+- RULES.md §8 (Interfaces de Usuario y Dashboards): every dashboard must offer a visible Dark/Light
+  toggle, default to `prefers-color-scheme`, persist the choice, use color tokens with WCAG AA contrast
+  in both modes, avoid theme flash, re-theme charts, and ship README screenshots in both modes.
+  Dependency-free reference implementation: `templates/theme-toggle.html`.
 
 ### Changed
 - `generate-contexto.py`: the "Last updated" line is not taken as the project purpose.
@@ -16869,7 +16875,7 @@ graph TD
 
 | Archivo / carpeta | Rol |
 |---|---|
-| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, capturas con iris (§5.5), "Last updated" (§5.11), catálogo de API keys (§6.5), contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7) |
+| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, capturas con iris (§5.5), "Last updated" (§5.11), catálogo de API keys (§6.5), toggle Dark/Light en dashboards (§8), contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7), UI y dashboards (§8) |
 | [`contexto_proyecto.md`](contexto_proyecto.md) | Base de código consolidada para un LLM posterior (§5.10). Regenerar con `scripts/generate-contexto.py` |
 | [`docs/code-standards.md`](docs/code-standards.md) | Nomenclatura, formato, testing, checklist de revisión |
 | [`docs/commit-conventions.md`](docs/commit-conventions.md) | Convenciones de commits |
@@ -16883,6 +16889,7 @@ graph TD
 | `scripts/run_on_modal.py` | Cliente del backend `modal` ([Modal](https://modal.com), ~$30 USD/mes gratis) |
 | `scripts/transcribe_via_groq.py` | Cliente del backend `cloud-api` para proyectos basados en Whisper (Groq) |
 | `scripts/run_on_hf_inference.py` | Cliente del backend `cloud-api` para otros modelos hospedados en HF |
+| [`templates/theme-toggle.html`](templates/theme-toggle.html) | Implementación de referencia del toggle Dark/Light para dashboards (RULES.md §8) |
 | [`wiki/`](wiki/Home.md) | Wiki operativa de este propio repo (onboarding, arquitectura, runbook) |
 
 ## Uso rápido
@@ -16934,6 +16941,7 @@ API keys en proyectos nuevos (RULES.md §6.5): `bootstrap-project.sh` escribe en
 | "Last updated" en README y wiki (§5.11) | ✅ |
 | Catálogo de API keys ofrecido a proyectos nuevos (§6.5) | ✅ |
 | Capturas con iris (§5.5c) | N/A — sin UI |
+| Toggle Dark/Light en dashboards (§8) | N/A — sin UI; provee `templates/theme-toggle.html` |
 
 ## Documentación
 
@@ -17032,6 +17040,18 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
     *   **Interfaces CLI:** flag `--compute {local,colab,cloud-api,cloud-serverless,modal}` (limitado al subconjunto que el proyecto soporte). Default: `local` si hay CUDA disponible; si no hay CUDA y no se especificó `--compute`, el programa debe informar la ausencia y listar las alternativas en vez de intentar correr en CPU silenciosamente sobre una carga pesada.
 *   **7.4. Modelos tipo Stable Diffusion (Difusión de Imágenes):** Estos quedan **fuera del alcance de `colab`/`cloud-api`/`cloud-serverless`/`modal` de este estándar** por decisión de producto, no técnica — se gestionan aparte. Un componente de difusión dentro de un proyecto no-Stable-Diffusion (ej. un pipeline de audio que use Riffusion) debe quedar detrás de un flag explícito de opt-in, no habilitado por default.
 *   **7.5. Implementación de Referencia:** `scripts/gpu_compute.py` en este repositorio provee `detect_cuda()`, `resolve_backend()` y `colab_badge()` como base reutilizable; `scripts/run_on_modal.py` provee `call_modal_function()` para el backend `modal`; cada proyecto adapta esta base a su propia carga de trabajo en vez de reimplementar la detección desde cero.
+
+---
+
+## 8. Interfaces de Usuario y Dashboards
+
+*   **8.1. Toggle Dark/Light Obligatorio:** Todo dashboard o interfaz web del ecosistema incluye un toggle visible (barra superior o panel de Settings) para alternar entre modo **Dark** y **Light**. Sin elección previa del usuario, el tema inicial sigue la preferencia del sistema operativo (`prefers-color-scheme`). La elección se persiste por usuario (`localStorage` o preferencias del backend) y se respeta en visitas posteriores.
+*   **8.2. Colores como Tokens:** Los colores se definen como variables (CSS custom properties o el sistema de theming del framework: MUI, Tailwind `dark:`, Streamlit/Gradio theme, etc.) con un juego completo por modo. No se hardcodean colores en componentes. Ambos modos cumplen contraste WCAG AA (4.5:1 para texto normal).
+*   **8.3. Sin Destello de Tema:** El tema se resuelve antes del primer pintado (script inline en `<head>` o equivalente server-side) para evitar el destello del modo incorrecto al cargar.
+*   **8.4. Gráficos y Componentes Embebidos:** Gráficos (Chart.js, Plotly, ECharts, Recharts, etc.), mapas, tablas y editores embebidos cambian de tema junto con la página, sin recargar. La implementación de referencia emite el evento `themechange` para re-renderizarlos.
+*   **8.5. Accesibilidad del Toggle:** El toggle es un `<button>` operable por teclado, con `aria-label` que describe la acción y `aria-pressed` reflejando el estado.
+*   **8.6. Capturas en Ambos Modos:** Las capturas del README de un dashboard (§5.5c) incluyen la vista principal en modo claro y en modo oscuro (`iris --dark`).
+*   **8.7. Implementación de Referencia:** `templates/theme-toggle.html` (HTML/CSS/JS sin dependencias) implementa §8.1–8.5; cada proyecto la adapta a su stack. En frameworks con theming propio (Streamlit, Gradio, Dash), se usa el mecanismo nativo, siempre que cumpla §8.1–8.5.
 ```
 
 ## Ruta: `scripts/audit-standards.py`
@@ -19912,6 +19932,110 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
+## Ruta: `templates/theme-toggle.html`
+
+```html
+<!DOCTYPE html>
+<!-- Implementación de referencia del toggle Dark/Light (RULES.md §8). Copiar y adaptar. -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Theme toggle</title>
+  <script>
+    // §8.3: resolver el tema antes del primer pintado (sin flash).
+    (function () {
+      var saved = null;
+      try { saved = localStorage.getItem("theme"); } catch (e) {}
+      if (saved === "light" || saved === "dark") {
+        document.documentElement.setAttribute("data-theme", saved);
+      }
+    })();
+  </script>
+  <style>
+    /* §8.2: colores como tokens; el modo claro es la base. */
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fa;
+      --surface: #ffffff;
+      --text: #1a1d23;
+      --muted: #5b6270;
+      --border: #d9dde3;
+      --accent: #0b6bcb;
+    }
+    /* Sin elección guardada: seguir al sistema operativo (§8.1). */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --bg: #0f1115;
+        --surface: #181b21;
+        --text: #e6e8ec;
+        --muted: #9aa1ad;
+        --border: #2a2f38;
+        --accent: #5aa9ff;
+      }
+    }
+    /* Elección explícita del usuario. */
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0f1115;
+      --surface: #181b21;
+      --text: #e6e8ec;
+      --muted: #9aa1ad;
+      --border: #2a2f38;
+      --accent: #5aa9ff;
+    }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; }
+    header { display: flex; justify-content: space-between; align-items: center;
+             padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .theme-toggle { background: transparent; color: var(--text); border: 1px solid var(--border);
+                    border-radius: 6px; padding: 6px 10px; cursor: pointer; font: inherit; }
+    .theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Dashboard</strong>
+    <!-- §8.1: toggle visible en la barra superior, accesible por teclado. -->
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Cambiar a modo oscuro" aria-pressed="false">
+      <span aria-hidden="true">🌙</span> Dark
+    </button>
+  </header>
+  <main style="padding:16px">Contenido del dashboard.</main>
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var btn = document.getElementById("theme-toggle");
+      var media = window.matchMedia("(prefers-color-scheme: dark)");
+
+      function current() {
+        return root.getAttribute("data-theme") || (media.matches ? "dark" : "light");
+      }
+      function render() {
+        var dark = current() === "dark";
+        btn.setAttribute("aria-pressed", String(dark));
+        btn.setAttribute("aria-label", dark ? "Cambiar a modo claro" : "Cambiar a modo oscuro");
+        btn.innerHTML = dark ? '<span aria-hidden="true">☀️</span> Light'
+                             : '<span aria-hidden="true">🌙</span> Dark';
+        // §8.4: avisar a gráficos y componentes que deben re-renderizar con el tema.
+        window.dispatchEvent(new CustomEvent("themechange", { detail: { theme: current() } }));
+      }
+      btn.addEventListener("click", function () {
+        var next = current() === "dark" ? "light" : "dark";
+        root.setAttribute("data-theme", next);
+        try { localStorage.setItem("theme", next); } catch (e) {}
+        render();
+      });
+      media.addEventListener("change", function () {
+        if (!root.hasAttribute("data-theme")) render();
+      });
+      render();
+    })();
+  </script>
+</body>
+</html>
+```
+
 ## Ruta: `test.py`
 
 ```python
@@ -19971,6 +20095,7 @@ graph TD
 - **Una sola configuración de dominio.** `config.yaml` es el SSoT de parámetros; no se copian listas ni taxonomías entre módulos (§1.1).
 - **Secretos: nunca en el árbol, siempre escaneados.** `scripts/check-secrets.py` corre en pre-commit y en CI (árbol + historial completo); un falso positivo se descarta con `# allowlist-secret`, nunca deshabilitando el chequeo (§6).
 - **API keys: catálogo central, solo nombres.** Los valores viven en el repo privado `luciomerlo/LocalProjectsTracker` (`APIKEYS.env`/store cifrado). Cada proyecto nuevo recibe los nombres como opciones en `.env.example` (`APIKEYS_MATCH`) y su `.env` se genera con `--sync-apikeys` (§6.5).
+- **Dashboards: siempre Dark y Light.** Toda UI web trae un toggle visible que arranca según `prefers-color-scheme` y persiste la elección; referencia sin dependencias en `templates/theme-toggle.html` (§8).
 - **Cómputo: local nunca se elimina, lo remoto se suma.** Todo proyecto con carga GPU opcional detecta CUDA en runtime y ofrece hasta 4 backends remotos según su tier de peso (`colab`/`cloud-api`/`cloud-serverless`/`modal`), pero `local` sigue siendo una opción disponible siempre — ver [Compute](Compute.md) (§7).
 
 ## Mapa de RULES.md
@@ -19983,6 +20108,7 @@ graph TD
 | §4 | Clasificación de errores, evidencia, `status.json` |
 | §5 | SemVer, CHANGELOG, higiene, pins, README (capturas con iris), bootstrap, auditoría, descripción, Wiki, contexto LLM, fecha "Last updated" |
 | §6 | Prohibición de secretos hardcodeados, escaneo automatizado, falsos positivos, `.env`, catálogo central de API keys para proyectos nuevos |
+| §8 | Toggle Dark/Light obligatorio en dashboards, tokens de color, sin destello, gráficos, accesibilidad, capturas en ambos modos |
 | §7 | Detección de CUDA, los 5 backends de cómputo, selección de UI/CLI, exclusión de modelos de difusión, implementación de referencia |
 ````
 
@@ -20129,6 +20255,15 @@ iris --selector '#dashboard' --padding 24 -o docs/screenshots/dashboard.png http
 
 Requiere un navegador Chrome/Chromium (`--chrome RUTA` si no se autodetecta). Ejecutado como root (contenedores/CI), Chromium necesita `--no-sandbox`: usar un wrapper que lo agregue y pasarlo con `--chrome`.
 
+## Dashboards: toggle Dark/Light (§8)
+
+Si el proyecto tiene dashboard o UI web, copiar y adaptar [`templates/theme-toggle.html`](../templates/theme-toggle.html): script inline en `<head>` (sin destello), tokens CSS por modo, `<button>` con `aria-pressed` y evento `themechange` para re-renderizar gráficos. En Streamlit/Gradio/Dash usar el theming nativo cumpliendo §8.1–8.5. Capturas del README en ambos modos:
+
+```bash
+iris -o docs/screenshots/dashboard-light.png http://localhost:8080
+iris --dark -o docs/screenshots/dashboard-dark.png http://localhost:8080
+```
+
 ## Arrancar un repositorio nuevo
 
 Ejecutar **dentro** de la carpeta del repo:
@@ -20201,6 +20336,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | `scripts/bootstrap-project.sh` | Scaffold obligatorio de un repo nuevo (§5.6) |
 | `scripts/generate-contexto.py` | Regenera `contexto_proyecto.md`, el volcado para un LLM (§5.10) |
 | `scripts/audit-standards.py` | Auditoría periódica de cumplimiento (§5.7) |
+| `templates/theme-toggle.html` | Referencia del toggle Dark/Light para dashboards (§8) |
 | `scripts/check-secrets.py` | Escaneo de secretos, árbol + historial (§6.2) |
 | `scripts/gpu_compute.py` | Detección de CUDA, tag de estado, selección de backend (§7.1–§7.3) |
 | `scripts/make_colab_notebook.py` | Genera el notebook companion del backend `colab` (§7.2) |
@@ -20270,6 +20406,10 @@ esté referenciado en el pipeline de CI (`.github/workflows/ci.yml`). No
 valida que el pre-commit hook esté instalado localmente — eso es
 responsabilidad de cada clon (`.pre-commit-config.yaml` + `pre-commit
 install`).
+
+### Dashboards (§8) — no auditado automáticamente
+
+El auditor no detecta dashboards ni verifica el toggle Dark/Light; se revisa en code review contra §8.1–8.5.
 
 ### Cómputo (§7) — no auditado automáticamente
 

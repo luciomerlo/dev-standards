@@ -34,6 +34,7 @@ graph TD
 - **Una sola configuración de dominio.** `config.yaml` es el SSoT de parámetros; no se copian listas ni taxonomías entre módulos (§1.1).
 - **Secretos: nunca en el árbol, siempre escaneados.** `scripts/check-secrets.py` corre en pre-commit y en CI (árbol + historial completo); un falso positivo se descarta con `# allowlist-secret`, nunca deshabilitando el chequeo (§6).
 - **API keys: catálogo central, solo nombres.** Los valores viven en el repo privado `luciomerlo/LocalProjectsTracker` (`APIKEYS.env`/store cifrado). Cada proyecto nuevo recibe los nombres como opciones en `.env.example` (`APIKEYS_MATCH`) y su `.env` se genera con `--sync-apikeys` (§6.5).
+- **Dashboards: siempre Dark y Light.** Toda UI web trae un toggle visible que arranca según `prefers-color-scheme` y persiste la elección; referencia sin dependencias en `templates/theme-toggle.html` (§8).
 - **Cómputo: local nunca se elimina, lo remoto se suma.** Todo proyecto con carga GPU opcional detecta CUDA en runtime y ofrece hasta 4 backends remotos según su tier de peso (`colab`/`cloud-api`/`cloud-serverless`/`modal`), pero `local` sigue siendo una opción disponible siempre — ver [Compute](Compute.md) (§7).
 
 ## Mapa de RULES.md
@@ -46,4 +47,5 @@ graph TD
 | §4 | Clasificación de errores, evidencia, `status.json` |
 | §5 | SemVer, CHANGELOG, higiene, pins, README (capturas con iris), bootstrap, auditoría, descripción, Wiki, contexto LLM, fecha "Last updated" |
 | §6 | Prohibición de secretos hardcodeados, escaneo automatizado, falsos positivos, `.env`, catálogo central de API keys para proyectos nuevos |
+| §8 | Toggle Dark/Light obligatorio en dashboards, tokens de color, sin destello, gráficos, accesibilidad, capturas en ambos modos |
 | §7 | Detección de CUDA, los 5 backends de cómputo, selección de UI/CLI, exclusión de modelos de difusión, implementación de referencia |

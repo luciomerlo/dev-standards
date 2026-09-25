@@ -40,6 +40,10 @@ valida que el pre-commit hook esté instalado localmente — eso es
 responsabilidad de cada clon (`.pre-commit-config.yaml` + `pre-commit
 install`).
 
+### Dashboards (§8) — no auditado automáticamente
+
+El auditor no detecta dashboards ni verifica el toggle Dark/Light; se revisa en code review contra §8.1–8.5.
+
 ### Cómputo (§7) — no auditado automáticamente
 
 A diferencia de Wiki y secretos, `audit-standards.py` **no** puntúa la
