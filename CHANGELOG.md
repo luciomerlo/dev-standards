@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- CI: removed the `semantic-release` job. It failed on every push to `main` (`ENOPKG`: its default npm
+  plugin needs a `package.json`, which this Python repo does not have). Versioning stays manual.
 - CI "Lint & Type Check" green: `ruff check`, `ruff format --check` and `mypy` pass on `scripts/`.
   Ruff config moved to `[tool.ruff.lint]`; `T201` (print) ignored for `scripts/*`, which are CLIs.
   Line-length, naming and typing fixes only, no behavior change.
