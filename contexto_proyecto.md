@@ -74,7 +74,7 @@
 └── test.py
 ```
 
-- Fuera del volcado de contenido: carpetas `.git`, `.ruff_cache`, `graft`, `.claude/skills/apple-design`, `scripts/__pycache__`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `.gitmodules`, `.ignore`, `LICENSE`.
+- Fuera del volcado de contenido: carpetas `.git`, `.mypy_cache`, `.ruff_cache`, `graft`, `.claude/skills/apple-design`, `scripts/__pycache__`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `.gitmodules`, `.ignore`, `LICENSE`.
 
 # ARCHIVOS DEL PROYECTO
 
@@ -15949,6 +15949,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- CI "Lint & Type Check" green: `ruff check`, `ruff format --check` and `mypy` pass on `scripts/`.
+  Ruff config moved to `[tool.ruff.lint]`; `T201` (print) ignored for `scripts/*`, which are CLIs.
+  Line-length, naming and typing fixes only, no behavior change.
+
 ### Added
 - RULES.md §5.11: repositories that use dev-standards as a knowledge base carry an `AGENTS.md` (plus
   `CLAUDE.md` importing it) that declares dev-standards and lists the external standards to apply
@@ -17295,7 +17300,13 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "C4", "PT", "T20"]
+
+[tool.ruff.lint.per-file-ignores]
+# scripts/ son CLIs: imprimir en stdout es su interfaz, no código de depuración.
+"scripts/*" = ["T201"]
 
 [tool.mypy]
 python_version = "3.10"
@@ -17550,7 +17561,8 @@ y valida la presencia de:
   - CI (.github/workflows/*.yml)
   - .env.example
   - config.yaml (SSoT)
-  - Cumplimiento básico de RULES.md §1-4 (retry, fallback, async, progress, error classification, cache, streaming, port control, db robustness)
+  - Cumplimiento básico de RULES.md §1-4 (retry, fallback, async, progress,
+    error classification, cache, streaming, port control, db robustness)
 
 Genera un reporte Markdown y opcionalmente falla si hay regresiones vs. línea base.
 """
@@ -17561,10 +17573,11 @@ import os
 import re
 import subprocess
 import sys
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 
 @dataclass
 class ProjectAudit:
@@ -17595,11 +17608,16 @@ class ProjectAudit:
     has_port_control: bool
     has_db_robustness: bool
     score: int  # 0-100
-    details: Dict[str, Any]
+    details: dict[str, Any]
+
 
 def detect_language(project_path: Path) -> str:
     """Detecta el lenguaje principal del proyecto."""
-    if (project_path / "pyproject.toml").exists() or (project_path / "setup.py").exists() or (project_path / "requirements.txt").exists():
+    if (
+        (project_path / "pyproject.toml").exists()
+        or (project_path / "setup.py").exists()
+        or (project_path / "requirements.txt").exists()
+    ):
         return "python"
     if (project_path / "package.json").exists():
         return "node"
@@ -17608,6 +17626,7 @@ def detect_language(project_path: Path) -> str:
     if (project_path / "Cargo.toml").exists():
         return "rust"
     return "unknown"
+
 
 def check_semver(project_path: Path, lang: str) -> bool:
     """Verifica si existe versión SemVer en el manifiesto correspondiente."""
@@ -17641,6 +17660,7 @@ def check_semver(project_path: Path, lang: str) -> bool:
         pass
     return False
 
+
 def check_changelog(project_path: Path) -> bool:
     p = project_path / "CHANGELOG.md"
     if not p.exists():
@@ -17649,6 +17669,7 @@ def check_changelog(project_path: Path) -> bool:
     # Verifica formato Keep a Changelog básico
     return bool(re.search(r"##\s*\[.*\]\s*-\s*\d{4}-\d{2}-\d{2}", txt))
 
+
 def check_readme_images(project_path: Path) -> bool:
     p = project_path / "README.md"
     if not p.exists():
@@ -17656,22 +17677,27 @@ def check_readme_images(project_path: Path) -> bool:
     txt = p.read_text(encoding="utf-8", errors="ignore")
     return bool(re.search(r"!\[.*\]\(.*\)", txt))
 
+
 DESCRIPTION_MAX_CHARS = 350
 GITHUB_REMOTE_RE = re.compile(r"github\.com[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
 
-def github_slug(project_path: Path) -> Optional[str]:
+
+def github_slug(project_path: Path) -> str | None:
     """Devuelve 'owner/repo' a partir del remote origin, o None si no apunta a GitHub."""
     try:
         url = subprocess.run(
             ["git", "-C", str(project_path), "remote", "get-url", "origin"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         ).stdout.strip()
     except Exception:
         return None
     m = GITHUB_REMOTE_RE.search(url)
     return f"{m.group(1)}/{m.group(2)}" if m else None
 
-def fetch_github_description(slug: str) -> Optional[str]:
+
+def fetch_github_description(slug: str) -> str | None:
     """Lee el campo 'description' del repo en la API de GitHub. None si la API no responde."""
     import urllib.request
 
@@ -17685,6 +17711,7 @@ def fetch_github_description(slug: str) -> Optional[str]:
             return json.loads(resp.read().decode("utf-8")).get("description") or ""
     except Exception:
         return None
+
 
 def check_description(project_path: Path) -> bool:
     """Verifica la descripción del repo en GitHub: no vacía y <=350 caracteres (RULES.md §5.8).
@@ -17702,8 +17729,10 @@ def check_description(project_path: Path) -> bool:
     desc = desc.strip()
     return bool(desc) and len(desc) <= DESCRIPTION_MAX_CHARS
 
+
 REQUIRED_WIKI_PAGES = ("Home.md", "Architecture.md", "Getting-Started.md", "Operations.md")
 WIKI_MIN_CHARS = 80
+
 
 def check_wiki(project_path: Path) -> bool:
     """Verifica wiki/ con las páginas mínimas de RULES.md §5.9, rellenas (no stubs)."""
@@ -17721,6 +17750,7 @@ def check_wiki(project_path: Path) -> bool:
             return False
     return True
 
+
 def check_contexto(project_path: Path) -> bool:
     """Verifica contexto_proyecto.md con la estructura de RULES.md §5.10."""
     p = project_path / "contexto_proyecto.md"
@@ -17734,12 +17764,14 @@ def check_contexto(project_path: Path) -> bool:
     has_route = re.search(r"^## Ruta: `[^`]+`", txt, re.MULTILINE)
     return bool(has_summary and has_files and has_route)
 
+
 def check_agents_md(project_path: Path) -> bool:
     """Verifica AGENTS.md en la raíz que declara dev-standards (RULES.md §5.11)."""
     p = project_path / "AGENTS.md"
     if not p.is_file():
         return False
     return "dev-standards" in p.read_text(encoding="utf-8", errors="ignore")
+
 
 def check_graft(project_path: Path) -> bool:
     """Verifica el wiring de Graft y que su caché graft/ no se versione (RULES.md §9)."""
@@ -17758,14 +17790,17 @@ def check_graft(project_path: Path) -> bool:
     lines = {ln.strip() for ln in gi.read_text(encoding="utf-8", errors="ignore").splitlines()}
     return bool(lines & {"/graft/", "graft/", "/graft"})
 
+
 def check_file_exists(project_path: Path, name: str) -> bool:
     return (project_path / name).exists()
+
 
 def check_ci(project_path: Path) -> bool:
     wf = project_path / ".github" / "workflows"
     if not wf.exists():
         return False
     return any(wf.glob("*.yml")) or any(wf.glob("*.yaml"))
+
 
 def check_secret_scan(project_path: Path) -> bool:
     """Verifica guardarraíl de secretos: script + pre-commit + job en CI (RULES.md §6.2)."""
@@ -17784,20 +17819,91 @@ def check_secret_scan(project_path: Path) -> bool:
             continue
     return False
 
-def scan_code_patterns(project_path: Path) -> Dict[str, bool]:
+
+def scan_code_patterns(project_path: Path) -> dict[str, bool]:
     """Escanea patrones de código para RULES §1-4 (optimizado)."""
     patterns = {
-        "has_retry_backoff": [r"backoff", r"exponential.*retry", r"retry.*exponential", r"p-limit", r"Semaphore", r"async.*retry", r"tenacity"],
-        "has_fallback_chain": [r"fallback", r"fall-back", r"try.*catch.*continue", r"model.*chain", r"alternative.*model"],
-        "has_async": [r"async\s+def", r"async\s+function", r"await\s+", r"Promise\.", r"asyncio\.", r"threading\.Thread", r"ThreadPoolExecutor"],
-        "has_progress": [r"progress", r"callback.*progres", r"tqdm", r"rich\.progress", r"ProgressBar", r"status\.json"],
-        "has_error_classification": [r"classify.*error", r"error.*classif", r"\bAuth\b", r"\bRateLimit\b", r"\bNotFound\b", r"\bTimeout\b", r"\b401\b", r"\b429\b", r"\b503\b"],
-        "has_cache": [r"\bcache\b", r"\bCache\b", r"\bLRU\b", r"\bRedis\b", r"\bIndexedDB\b", r"\bTTL\b", r"memoize", r"lru_cache"],
-        "has_streaming": [r"\bstream\b", r"\bStream\b", r"BytesIO", r"io\.BytesIO", r"pipeline", r"generator", r"\byield\b"],
-        "has_port_control": [r"EADDRINUSE", r"port.*in.use", r"listen.*port", r"server.*close", r"process\.exit"],
-        "has_db_robustness": [r"busy_timeout", r"PRAGMA", r"transaction", r"idempotent", r"migration", r"schema.*check", r"runCatching"],
+        "has_retry_backoff": [
+            r"backoff",
+            r"exponential.*retry",
+            r"retry.*exponential",
+            r"p-limit",
+            r"Semaphore",
+            r"async.*retry",
+            r"tenacity",
+        ],
+        "has_fallback_chain": [
+            r"fallback",
+            r"fall-back",
+            r"try.*catch.*continue",
+            r"model.*chain",
+            r"alternative.*model",
+        ],
+        "has_async": [
+            r"async\s+def",
+            r"async\s+function",
+            r"await\s+",
+            r"Promise\.",
+            r"asyncio\.",
+            r"threading\.Thread",
+            r"ThreadPoolExecutor",
+        ],
+        "has_progress": [
+            r"progress",
+            r"callback.*progres",
+            r"tqdm",
+            r"rich\.progress",
+            r"ProgressBar",
+            r"status\.json",
+        ],
+        "has_error_classification": [
+            r"classify.*error",
+            r"error.*classif",
+            r"\bAuth\b",
+            r"\bRateLimit\b",
+            r"\bNotFound\b",
+            r"\bTimeout\b",
+            r"\b401\b",
+            r"\b429\b",
+            r"\b503\b",
+        ],
+        "has_cache": [
+            r"\bcache\b",
+            r"\bCache\b",
+            r"\bLRU\b",
+            r"\bRedis\b",
+            r"\bIndexedDB\b",
+            r"\bTTL\b",
+            r"memoize",
+            r"lru_cache",
+        ],
+        "has_streaming": [
+            r"\bstream\b",
+            r"\bStream\b",
+            r"BytesIO",
+            r"io\.BytesIO",
+            r"pipeline",
+            r"generator",
+            r"\byield\b",
+        ],
+        "has_port_control": [
+            r"EADDRINUSE",
+            r"port.*in.use",
+            r"listen.*port",
+            r"server.*close",
+            r"process\.exit",
+        ],
+        "has_db_robustness": [
+            r"busy_timeout",
+            r"PRAGMA",
+            r"transaction",
+            r"idempotent",
+            r"migration",
+            r"schema.*check",
+            r"runCatching",
+        ],
     }
-    results = {k: False for k in patterns}
+    results = dict.fromkeys(patterns, False)
     code_ext = {".py", ".js", ".ts", ".tsx", ".jsx", ".mjs", ".cjs", ".go", ".rs", ".java", ".kt"}
     try:
         # Limit to first 30 code files per project for speed
@@ -17820,6 +17926,7 @@ def scan_code_patterns(project_path: Path) -> Dict[str, bool]:
     except Exception:
         pass
     return results
+
 
 def audit_project(project_path: Path) -> ProjectAudit:
     name = project_path.name
@@ -17916,16 +18023,19 @@ def audit_project(project_path: Path) -> ProjectAudit:
         details={"language": lang},
     )
 
-def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
+
+def generate_report(audits: list[ProjectAudit], output_path: Path) -> None:
     """Genera reporte Markdown estilo AUDIT_REPORT.md."""
     lines = [
         f"# REPORTE DE AUDITORÍA AUTOMATIZADA - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
         "",
         f"Total proyectos auditados: {len(audits)}",
-        f"Promedio score: {sum(a.score for a in audits) / len(audits):.1f}/100" if audits else "N/A",
+        f"Promedio score: {sum(a.score for a in audits) / len(audits):.1f}/100"
+        if audits
+        else "N/A",
         "",
         "---",
-        ""
+        "",
     ]
     for a in sorted(audits, key=lambda x: -x.score):
         status = "✅" if a.score >= 80 else ("⚠️" if a.score >= 50 else "❌")
@@ -17970,22 +18080,28 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
     output_path.write_text("\n".join(lines), encoding="utf-8")
     print(f"Reporte generado: {output_path}")
 
-def load_baseline(baseline_path: Path) -> Dict[str, int]:
+
+def load_baseline(baseline_path: Path) -> dict[str, int]:
     """Carga línea base de scores previos (JSON)."""
     if baseline_path.exists():
-        return json.loads(baseline_path.read_text(encoding="utf-8"))
+        data: dict[str, int] = json.loads(baseline_path.read_text(encoding="utf-8"))
+        return data
     return {}
 
-def save_baseline(baseline_path: Path, audits: List[ProjectAudit]) -> None:
+
+def save_baseline(baseline_path: Path, audits: list[ProjectAudit]) -> None:
     data = {a.name: a.score for a in audits}
     baseline_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
-def main():
+
+def main() -> None:
     parser = argparse.ArgumentParser(description="Auditoría dev-standards")
     parser.add_argument("--root", default="D:\\Projects", help="Directorio raíz de proyectos")
     parser.add_argument("--output", default="AUDIT_REPORT.md", help="Archivo de salida Markdown")
     parser.add_argument("--baseline", default="audit_baseline.json", help="Archivo JSON línea base")
-    parser.add_argument("--fail-on-regression", action="store_true", help="Exit 1 si algún proyecto baja score")
+    parser.add_argument(
+        "--fail-on-regression", action="store_true", help="Exit 1 si algún proyecto baja score"
+    )
     args = parser.parse_args()
 
     root = Path(args.root)
@@ -18021,6 +18137,7 @@ def main():
 
     save_baseline(Path(args.baseline), audits)
     print(f"Línea base actualizada: {args.baseline}")
+
 
 if __name__ == "__main__":
     main()
@@ -18955,6 +19072,7 @@ import argparse
 import re
 import subprocess
 import sys
+from collections.abc import Iterator
 
 PATTERNS = {
     "Groq API key": r"gsk_[A-Za-z0-9]{20,}",
@@ -18964,7 +19082,9 @@ PATTERNS = {
     "GitHub token": r"(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}",
     "Slack token": r"xox[baprs]-[A-Za-z0-9-]{10,}",
     "Private key block": r"-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----",
-    "Hardcoded secret assignment": r'(api[_-]?key|secret|token|password)["\']?\s*[:=]\s*["\']([A-Za-z0-9_\-]{16,})["\']',
+    "Hardcoded secret assignment": (
+        r'(api[_-]?key|secret|token|password)["\']?\s*[:=]\s*["\']([A-Za-z0-9_\-]{16,})["\']'
+    ),
 }
 # Valores que parecen nombres de variable de entorno (ANTHROPIC_API_KEY), no secretos reales.
 _ENV_VAR_LOOKALIKE = re.compile(r"^[A-Z][A-Z0-9_]{15,}$")
@@ -18972,11 +19092,13 @@ ALLOWLIST_MARKER = "allowlist-secret"
 SKIP_FILES = (".env.example", "check-secrets.py")
 
 
-def iter_lines(mode: str):
+def iter_lines(mode: str) -> Iterator[tuple[str, str]]:
     if mode == "staged":
         diff = subprocess.run(
             ["git", "diff", "--cached", "-U0", "--no-color"],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         ).stdout
         path = None
         for line in diff.splitlines():
@@ -18986,13 +19108,16 @@ def iter_lines(mode: str):
                 yield path, line[1:]
     elif mode == "tree":
         files = subprocess.run(
-            ["git", "ls-files"], capture_output=True, text=True, check=False,
+            ["git", "ls-files"],
+            capture_output=True,
+            text=True,
+            check=False,
         ).stdout.splitlines()
         for path in files:
             if any(skip in path for skip in SKIP_FILES):
                 continue
             try:
-                with open(path, "r", encoding="utf-8", errors="ignore") as fh:
+                with open(path, encoding="utf-8", errors="ignore") as fh:
                     for line in fh:
                         yield path, line
             except (OSError, IsADirectoryError):
@@ -19000,7 +19125,9 @@ def iter_lines(mode: str):
     elif mode == "history":
         log = subprocess.run(
             ["git", "log", "--all", "-p", "--no-color"],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         ).stdout
         path = None
         for line in log.splitlines():
@@ -19604,8 +19731,8 @@ def render_tree(rels: list[str]) -> str:
 
     def walk(node: Tree, prefix: str) -> None:
         entries: list[tuple[str, Tree | None]] = []
-        for name, child in sorted(node.dirs.items()):
-            entries.append((name, child))
+        for name, sub in sorted(node.dirs.items()):
+            entries.append((name, sub))
         for name in sorted(node.files):
             entries.append((name, None))
         for index, (name, child) in enumerate(entries):
@@ -19738,7 +19865,6 @@ import argparse
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 BACKENDS = ("local", "colab", "cloud-api", "cloud-serverless", "modal")
 
@@ -19783,7 +19909,7 @@ def cuda_status_tag() -> StatusTag:
 def add_compute_arg(
     parser: argparse.ArgumentParser,
     available: tuple = BACKENDS,
-    default: Optional[str] = None,
+    default: str | None = None,
 ) -> None:
     """Agrega el flag --compute a un parser de CLI, limitado a los backends
     que este proyecto realmente soporta (`available`, ver HEAVY_BACKENDS /
@@ -19798,7 +19924,7 @@ def add_compute_arg(
 
 
 def resolve_backend(
-    requested: Optional[str],
+    requested: str | None,
     *,
     available: tuple = BACKENDS,
     allow_diffusion_models: bool = False,
@@ -19811,7 +19937,9 @@ def resolve_backend(
     """
     if requested:
         if requested not in available:
-            raise ValueError(f"Backend {requested!r} no soportado por este proyecto. Opciones: {available}")
+            raise ValueError(
+                f"Backend {requested!r} no soportado por este proyecto. Opciones: {available}"
+            )
         return requested
 
     if detect_cuda():
@@ -19915,10 +20043,12 @@ def build_notebook(
     pip_packages: list,
     run_cmd_template: str,
     output_glob: str,
-    extra_setup: list = None,
+    extra_setup: list[str] | None = None,
 ) -> dict:
     repo_name = repo_url.rstrip("/").split("/")[-1]
-    pip_line = "!pip install -q " + " ".join(pip_packages) if pip_packages else "# sin deps adicionales"
+    pip_line = (
+        "!pip install -q " + " ".join(pip_packages) if pip_packages else "# sin deps adicionales"
+    )
     setup_lines = list(extra_setup or [])
 
     cells = [
@@ -19939,7 +20069,7 @@ def build_notebook(
                 f"%cd {repo_name}\n",
             ]
         ),
-        _code_cell([pip_line + "\n", *[l + "\n" for l in setup_lines]]),
+        _code_cell([pip_line + "\n", *[line + "\n" for line in setup_lines]]),
         _md_cell(["## 2. Verificar GPU asignada por Colab"]),
         _code_cell(
             [
@@ -19948,7 +20078,7 @@ def build_notebook(
                 "if torch.cuda.is_available():\n",
                 "    print('GPU:', torch.cuda.get_device_name(0))\n",
                 "else:\n",
-                "    print(\"Runtime > Change runtime type > GPU, y volvé a correr esta celda.\")\n",
+                '    print("Runtime > Change runtime type > GPU, y volvé a correr esta celda.")\n',
             ]
         ),
         _md_cell(["## 3. Subir el archivo de entrada"]),
@@ -19990,14 +20120,20 @@ def build_notebook(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--repo-url", required=True)
     parser.add_argument("--branch", default="main")
     parser.add_argument("--title", required=True)
     parser.add_argument("--pip", nargs="*", default=[])
-    parser.add_argument("--run", required=True, help="Comando a ejecutar; usar {input_file} como placeholder")
+    parser.add_argument(
+        "--run", required=True, help="Comando a ejecutar; usar {input_file} como placeholder"
+    )
     parser.add_argument("--output-glob", required=True)
-    parser.add_argument("--extra-setup", nargs="*", default=[], help="Líneas de shell extra antes de correr")
+    parser.add_argument(
+        "--extra-setup", nargs="*", default=[], help="Líneas de shell extra antes de correr"
+    )
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
 
@@ -20032,10 +20168,12 @@ Requiere HUGGINGFACE_TOKEN en el entorno (nunca hardcodear, RULES.md §6.4).
 
 Uso como librería:
     from run_on_hf_inference import infer
-    result = infer(model_id="MIT/ast-finetuned-audioset-10-10-0.4593", data=open("clip.wav","rb").read())
+    audio = open("clip.wav", "rb").read()
+    result = infer(model_id="MIT/ast-finetuned-audioset-10-10-0.4593", data=audio)
 
 Uso por CLI:
-    python scripts/run_on_hf_inference.py --model MIT/ast-finetuned-audioset-10-10-0.4593 --file clip.wav
+    python scripts/run_on_hf_inference.py \
+        --model MIT/ast-finetuned-audioset-10-10-0.4593 --file clip.wav
 """
 
 from __future__ import annotations
@@ -20048,7 +20186,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 HF_API_BASE = "https://api-inference.huggingface.co/models"
 
@@ -20061,22 +20199,25 @@ def infer(
     *,
     model_id: str,
     data: bytes,
-    content_type: Optional[str] = None,
-    api_token: Optional[str] = None,
+    content_type: str | None = None,
+    api_token: str | None = None,
 ) -> Any:
     """Manda `data` (bytes crudos de audio/imagen) al endpoint de Inference API
     de `model_id`. Devuelve el JSON de respuesta ya decodificado."""
     api_token = api_token or os.environ.get("HUGGINGFACE_TOKEN") or os.environ.get("HF_TOKEN")
     if not api_token:
         raise HFInferenceError(
-            "Falta HUGGINGFACE_TOKEN en el entorno. Configuralo en .env antes de usar --compute cloud-api."
+            "Falta HUGGINGFACE_TOKEN en el entorno. "
+            "Configuralo en .env antes de usar --compute cloud-api."
         )
 
     headers = {"Authorization": f"Bearer {api_token}"}
     if content_type:
         headers["Content-Type"] = content_type
 
-    req = urllib.request.Request(f"{HF_API_BASE}/{model_id}", data=data, method="POST", headers=headers)
+    req = urllib.request.Request(
+        f"{HF_API_BASE}/{model_id}", data=data, method="POST", headers=headers
+    )
     try:
         with urllib.request.urlopen(req, timeout=120) as resp:
             return json.loads(resp.read().decode("utf-8"))
@@ -20084,7 +20225,8 @@ def infer(
         body = e.read().decode("utf-8", errors="ignore")
         if e.code == 503:
             raise HFInferenceError(
-                f"Modelo cargando en el servidor de HF (cold start), reintentar en unos segundos: {body}"
+                "Modelo cargando en el servidor de HF (cold start), "
+                f"reintentar en unos segundos: {body}"
             ) from e
         raise HFInferenceError(f"HF Inference API error {e.code}: {body}") from e
     except urllib.error.URLError as e:
@@ -20092,7 +20234,9 @@ def infer(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--model", required=True, dest="model_id")
     parser.add_argument("--file", required=True, type=Path)
     args = parser.parse_args()
@@ -20103,7 +20247,9 @@ def main() -> int:
 
     content_type = mimetypes.guess_type(str(args.file))[0] or "application/octet-stream"
     try:
-        result = infer(model_id=args.model_id, data=args.file.read_bytes(), content_type=content_type)
+        result = infer(
+            model_id=args.model_id, data=args.file.read_bytes(), content_type=content_type
+        )
     except HFInferenceError as e:
         print(str(e), file=sys.stderr)
         return 1
@@ -20180,7 +20326,9 @@ def call_modal_function(app_name: str, function_name: str, **kwargs: Any) -> Any
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--app", required=True)
     parser.add_argument("--function", required=True)
     parser.add_argument("--payload", required=True, help="JSON con los kwargs de la función")
@@ -20193,7 +20341,9 @@ def main() -> int:
         print(str(e), file=sys.stderr)
         return 1
 
-    print(json.dumps(result, indent=2, ensure_ascii=False) if not isinstance(result, str) else result)
+    print(
+        json.dumps(result, indent=2, ensure_ascii=False) if not isinstance(result, str) else result
+    )
     return 0
 
 
@@ -20237,7 +20387,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from typing import Any, Dict, Optional
+from typing import Any
 
 API_BASE = "https://api.runpod.ai/v2"
 TERMINAL_STATUSES = {"COMPLETED", "FAILED", "CANCELLED", "TIMED_OUT"}
@@ -20247,7 +20397,7 @@ class RunPodError(RuntimeError):
     pass
 
 
-def _request(url: str, api_key: str, body: Optional[dict] = None, method: str = "POST") -> dict:
+def _request(url: str, api_key: str, body: dict | None = None, method: str = "POST") -> dict:
     data = json.dumps(body).encode("utf-8") if body is not None else None
     req = urllib.request.Request(
         url,
@@ -20260,20 +20410,23 @@ def _request(url: str, api_key: str, body: Optional[dict] = None, method: str = 
     )
     try:
         with urllib.request.urlopen(req, timeout=60) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+            parsed: dict[str, Any] = json.loads(resp.read().decode("utf-8"))
+            return parsed
     except urllib.error.HTTPError as e:
-        raise RunPodError(f"RunPod API error {e.code}: {e.read().decode('utf-8', errors='ignore')}") from e
+        raise RunPodError(
+            f"RunPod API error {e.code}: {e.read().decode('utf-8', errors='ignore')}"
+        ) from e
     except urllib.error.URLError as e:
         raise RunPodError(f"No se pudo contactar la API de RunPod: {e}") from e
 
 
-def submit_job(endpoint_id: str, api_key: str, payload: Dict[str, Any]) -> str:
+def submit_job(endpoint_id: str, api_key: str, payload: dict[str, Any]) -> str:
     """Encola el job. Devuelve el job id."""
     result = _request(f"{API_BASE}/{endpoint_id}/run", api_key, {"input": payload})
     job_id = result.get("id")
     if not job_id:
         raise RunPodError(f"Respuesta inesperada de RunPod al encolar el job: {result}")
-    return job_id
+    return str(job_id)
 
 
 def poll_job(endpoint_id: str, api_key: str, job_id: str) -> dict:
@@ -20285,10 +20438,10 @@ def cancel_job(endpoint_id: str, api_key: str, job_id: str) -> dict:
 
 
 def run_job(
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     *,
-    endpoint_id: Optional[str] = None,
-    api_key: Optional[str] = None,
+    endpoint_id: str | None = None,
+    api_key: str | None = None,
     poll_interval_s: float = 5.0,
     timeout_s: float = 1800.0,
 ) -> dict:
@@ -20315,7 +20468,8 @@ def run_job(
         if state in TERMINAL_STATUSES:
             if state != "COMPLETED":
                 raise RunPodError(f"Job {job_id} terminó en estado {state}: {status}")
-            return status.get("output", {})
+            output: dict[str, Any] = status.get("output", {})
+            return output
         if time.monotonic() > deadline:
             cancel_job(endpoint_id, api_key, job_id)
             raise RunPodError(f"Job {job_id} superó el timeout de {timeout_s}s; cancelado.")
@@ -20323,7 +20477,9 @@ def run_job(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--payload", required=True, help="JSON con el input del job")
     parser.add_argument("--timeout", type=float, default=1800.0)
     args = parser.parse_args()
@@ -20375,7 +20531,6 @@ import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
-from typing import Optional
 
 GROQ_TRANSCRIPTIONS_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
 DEFAULT_MODEL = "whisper-large-v3-turbo"
@@ -20390,12 +20545,14 @@ def _multipart_body(fields: dict, file_field: str, file_path: Path) -> tuple:
     parts = []
     for name, value in fields.items():
         parts.append(
-            f"--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n".encode()
+            (
+                f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'
+            ).encode()
         )
     content_type = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
     parts.append(
-        f"--{boundary}\r\nContent-Disposition: form-data; name=\"{file_field}\"; "
-        f"filename=\"{file_path.name}\"\r\nContent-Type: {content_type}\r\n\r\n".encode()
+        f'--{boundary}\r\nContent-Disposition: form-data; name="{file_field}"; '
+        f'filename="{file_path.name}"\r\nContent-Type: {content_type}\r\n\r\n'.encode()
     )
     parts.append(file_path.read_bytes())
     parts.append(f"\r\n--{boundary}--\r\n".encode())
@@ -20408,13 +20565,14 @@ def _call_groq(
     *,
     model: str,
     response_format: str,
-    language: Optional[str],
-    api_key: Optional[str],
-):
+    language: str | None,
+    api_key: str | None,
+) -> str:
     api_key = api_key or os.environ.get("GROQ_API_KEY")
     if not api_key:
         raise GroqTranscriptionError(
-            "Falta GROQ_API_KEY en el entorno. Configuralo en .env antes de usar --compute cloud-api."
+            "Falta GROQ_API_KEY en el entorno. "
+            "Configuralo en .env antes de usar --compute cloud-api."
         )
 
     path = Path(audio_path)
@@ -20434,7 +20592,8 @@ def _call_groq(
     )
     try:
         with urllib.request.urlopen(req, timeout=300) as resp:
-            return resp.read().decode("utf-8")
+            text: str = resp.read().decode("utf-8")
+            return text
     except urllib.error.HTTPError as e:
         raise GroqTranscriptionError(
             f"Groq API error {e.code}: {e.read().decode('utf-8', errors='ignore')}"
@@ -20447,30 +20606,37 @@ def transcribe(
     audio_path: str,
     *,
     model: str = DEFAULT_MODEL,
-    language: Optional[str] = None,
-    api_key: Optional[str] = None,
+    language: str | None = None,
+    api_key: str | None = None,
 ) -> str:
     """Transcribe `audio_path` vía la API de Groq. Devuelve el texto plano."""
-    return _call_groq(audio_path, model=model, response_format="text", language=language, api_key=api_key)
+    return _call_groq(
+        audio_path, model=model, response_format="text", language=language, api_key=api_key
+    )
 
 
 def transcribe_verbose(
     audio_path: str,
     *,
     model: str = DEFAULT_MODEL,
-    language: Optional[str] = None,
-    api_key: Optional[str] = None,
+    language: str | None = None,
+    api_key: str | None = None,
 ) -> dict:
     """Transcribe con `response_format=verbose_json`: devuelve un dict con
     `segments` (cada uno con `start`/`end`/`text`, igual forma que la API de
     OpenAI/faster-whisper), para pipelines que necesitan timestamps
     (ej. chunking por segmento) en vez de solo el texto plano."""
-    raw = _call_groq(audio_path, model=model, response_format="verbose_json", language=language, api_key=api_key)
-    return json.loads(raw)
+    raw = _call_groq(
+        audio_path, model=model, response_format="verbose_json", language=language, api_key=api_key
+    )
+    parsed: dict = json.loads(raw)
+    return parsed
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("audio_path")
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--language", default=None)

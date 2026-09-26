@@ -32,7 +32,6 @@ import argparse
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 BACKENDS = ("local", "colab", "cloud-api", "cloud-serverless", "modal")
 
@@ -77,7 +76,7 @@ def cuda_status_tag() -> StatusTag:
 def add_compute_arg(
     parser: argparse.ArgumentParser,
     available: tuple = BACKENDS,
-    default: Optional[str] = None,
+    default: str | None = None,
 ) -> None:
     """Agrega el flag --compute a un parser de CLI, limitado a los backends
     que este proyecto realmente soporta (`available`, ver HEAVY_BACKENDS /
@@ -92,7 +91,7 @@ def add_compute_arg(
 
 
 def resolve_backend(
-    requested: Optional[str],
+    requested: str | None,
     *,
     available: tuple = BACKENDS,
     allow_diffusion_models: bool = False,
@@ -105,7 +104,9 @@ def resolve_backend(
     """
     if requested:
         if requested not in available:
-            raise ValueError(f"Backend {requested!r} no soportado por este proyecto. Opciones: {available}")
+            raise ValueError(
+                f"Backend {requested!r} no soportado por este proyecto. Opciones: {available}"
+            )
         return requested
 
     if detect_cuda():

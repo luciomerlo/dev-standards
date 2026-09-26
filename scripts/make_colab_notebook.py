@@ -49,10 +49,12 @@ def build_notebook(
     pip_packages: list,
     run_cmd_template: str,
     output_glob: str,
-    extra_setup: list = None,
+    extra_setup: list[str] | None = None,
 ) -> dict:
     repo_name = repo_url.rstrip("/").split("/")[-1]
-    pip_line = "!pip install -q " + " ".join(pip_packages) if pip_packages else "# sin deps adicionales"
+    pip_line = (
+        "!pip install -q " + " ".join(pip_packages) if pip_packages else "# sin deps adicionales"
+    )
     setup_lines = list(extra_setup or [])
 
     cells = [
@@ -73,7 +75,7 @@ def build_notebook(
                 f"%cd {repo_name}\n",
             ]
         ),
-        _code_cell([pip_line + "\n", *[l + "\n" for l in setup_lines]]),
+        _code_cell([pip_line + "\n", *[line + "\n" for line in setup_lines]]),
         _md_cell(["## 2. Verificar GPU asignada por Colab"]),
         _code_cell(
             [
@@ -82,7 +84,7 @@ def build_notebook(
                 "if torch.cuda.is_available():\n",
                 "    print('GPU:', torch.cuda.get_device_name(0))\n",
                 "else:\n",
-                "    print(\"Runtime > Change runtime type > GPU, y volvé a correr esta celda.\")\n",
+                '    print("Runtime > Change runtime type > GPU, y volvé a correr esta celda.")\n',
             ]
         ),
         _md_cell(["## 3. Subir el archivo de entrada"]),
@@ -124,14 +126,20 @@ def build_notebook(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--repo-url", required=True)
     parser.add_argument("--branch", default="main")
     parser.add_argument("--title", required=True)
     parser.add_argument("--pip", nargs="*", default=[])
-    parser.add_argument("--run", required=True, help="Comando a ejecutar; usar {input_file} como placeholder")
+    parser.add_argument(
+        "--run", required=True, help="Comando a ejecutar; usar {input_file} como placeholder"
+    )
     parser.add_argument("--output-glob", required=True)
-    parser.add_argument("--extra-setup", nargs="*", default=[], help="Líneas de shell extra antes de correr")
+    parser.add_argument(
+        "--extra-setup", nargs="*", default=[], help="Líneas de shell extra antes de correr"
+    )
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
 

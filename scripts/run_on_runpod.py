@@ -31,7 +31,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from typing import Any, Dict, Optional
+from typing import Any
 
 API_BASE = "https://api.runpod.ai/v2"
 TERMINAL_STATUSES = {"COMPLETED", "FAILED", "CANCELLED", "TIMED_OUT"}
@@ -41,7 +41,7 @@ class RunPodError(RuntimeError):
     pass
 
 
-def _request(url: str, api_key: str, body: Optional[dict] = None, method: str = "POST") -> dict:
+def _request(url: str, api_key: str, body: dict | None = None, method: str = "POST") -> dict:
     data = json.dumps(body).encode("utf-8") if body is not None else None
     req = urllib.request.Request(
         url,
@@ -54,20 +54,23 @@ def _request(url: str, api_key: str, body: Optional[dict] = None, method: str = 
     )
     try:
         with urllib.request.urlopen(req, timeout=60) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+            parsed: dict[str, Any] = json.loads(resp.read().decode("utf-8"))
+            return parsed
     except urllib.error.HTTPError as e:
-        raise RunPodError(f"RunPod API error {e.code}: {e.read().decode('utf-8', errors='ignore')}") from e
+        raise RunPodError(
+            f"RunPod API error {e.code}: {e.read().decode('utf-8', errors='ignore')}"
+        ) from e
     except urllib.error.URLError as e:
         raise RunPodError(f"No se pudo contactar la API de RunPod: {e}") from e
 
 
-def submit_job(endpoint_id: str, api_key: str, payload: Dict[str, Any]) -> str:
+def submit_job(endpoint_id: str, api_key: str, payload: dict[str, Any]) -> str:
     """Encola el job. Devuelve el job id."""
     result = _request(f"{API_BASE}/{endpoint_id}/run", api_key, {"input": payload})
     job_id = result.get("id")
     if not job_id:
         raise RunPodError(f"Respuesta inesperada de RunPod al encolar el job: {result}")
-    return job_id
+    return str(job_id)
 
 
 def poll_job(endpoint_id: str, api_key: str, job_id: str) -> dict:
@@ -79,10 +82,10 @@ def cancel_job(endpoint_id: str, api_key: str, job_id: str) -> dict:
 
 
 def run_job(
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     *,
-    endpoint_id: Optional[str] = None,
-    api_key: Optional[str] = None,
+    endpoint_id: str | None = None,
+    api_key: str | None = None,
     poll_interval_s: float = 5.0,
     timeout_s: float = 1800.0,
 ) -> dict:
@@ -109,7 +112,8 @@ def run_job(
         if state in TERMINAL_STATUSES:
             if state != "COMPLETED":
                 raise RunPodError(f"Job {job_id} terminó en estado {state}: {status}")
-            return status.get("output", {})
+            output: dict[str, Any] = status.get("output", {})
+            return output
         if time.monotonic() > deadline:
             cancel_job(endpoint_id, api_key, job_id)
             raise RunPodError(f"Job {job_id} superó el timeout de {timeout_s}s; cancelado.")
@@ -117,7 +121,9 @@ def run_job(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--payload", required=True, help="JSON con el input del job")
     parser.add_argument("--timeout", type=float, default=1800.0)
     args = parser.parse_args()

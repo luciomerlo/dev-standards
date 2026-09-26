@@ -20,7 +20,8 @@ y valida la presencia de:
   - CI (.github/workflows/*.yml)
   - .env.example
   - config.yaml (SSoT)
-  - Cumplimiento básico de RULES.md §1-4 (retry, fallback, async, progress, error classification, cache, streaming, port control, db robustness)
+  - Cumplimiento básico de RULES.md §1-4 (retry, fallback, async, progress,
+    error classification, cache, streaming, port control, db robustness)
 
 Genera un reporte Markdown y opcionalmente falla si hay regresiones vs. línea base.
 """
@@ -31,10 +32,11 @@ import os
 import re
 import subprocess
 import sys
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 
 @dataclass
 class ProjectAudit:
@@ -65,11 +67,16 @@ class ProjectAudit:
     has_port_control: bool
     has_db_robustness: bool
     score: int  # 0-100
-    details: Dict[str, Any]
+    details: dict[str, Any]
+
 
 def detect_language(project_path: Path) -> str:
     """Detecta el lenguaje principal del proyecto."""
-    if (project_path / "pyproject.toml").exists() or (project_path / "setup.py").exists() or (project_path / "requirements.txt").exists():
+    if (
+        (project_path / "pyproject.toml").exists()
+        or (project_path / "setup.py").exists()
+        or (project_path / "requirements.txt").exists()
+    ):
         return "python"
     if (project_path / "package.json").exists():
         return "node"
@@ -78,6 +85,7 @@ def detect_language(project_path: Path) -> str:
     if (project_path / "Cargo.toml").exists():
         return "rust"
     return "unknown"
+
 
 def check_semver(project_path: Path, lang: str) -> bool:
     """Verifica si existe versión SemVer en el manifiesto correspondiente."""
@@ -111,6 +119,7 @@ def check_semver(project_path: Path, lang: str) -> bool:
         pass
     return False
 
+
 def check_changelog(project_path: Path) -> bool:
     p = project_path / "CHANGELOG.md"
     if not p.exists():
@@ -119,6 +128,7 @@ def check_changelog(project_path: Path) -> bool:
     # Verifica formato Keep a Changelog básico
     return bool(re.search(r"##\s*\[.*\]\s*-\s*\d{4}-\d{2}-\d{2}", txt))
 
+
 def check_readme_images(project_path: Path) -> bool:
     p = project_path / "README.md"
     if not p.exists():
@@ -126,22 +136,27 @@ def check_readme_images(project_path: Path) -> bool:
     txt = p.read_text(encoding="utf-8", errors="ignore")
     return bool(re.search(r"!\[.*\]\(.*\)", txt))
 
+
 DESCRIPTION_MAX_CHARS = 350
 GITHUB_REMOTE_RE = re.compile(r"github\.com[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
 
-def github_slug(project_path: Path) -> Optional[str]:
+
+def github_slug(project_path: Path) -> str | None:
     """Devuelve 'owner/repo' a partir del remote origin, o None si no apunta a GitHub."""
     try:
         url = subprocess.run(
             ["git", "-C", str(project_path), "remote", "get-url", "origin"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         ).stdout.strip()
     except Exception:
         return None
     m = GITHUB_REMOTE_RE.search(url)
     return f"{m.group(1)}/{m.group(2)}" if m else None
 
-def fetch_github_description(slug: str) -> Optional[str]:
+
+def fetch_github_description(slug: str) -> str | None:
     """Lee el campo 'description' del repo en la API de GitHub. None si la API no responde."""
     import urllib.request
 
@@ -155,6 +170,7 @@ def fetch_github_description(slug: str) -> Optional[str]:
             return json.loads(resp.read().decode("utf-8")).get("description") or ""
     except Exception:
         return None
+
 
 def check_description(project_path: Path) -> bool:
     """Verifica la descripción del repo en GitHub: no vacía y <=350 caracteres (RULES.md §5.8).
@@ -172,8 +188,10 @@ def check_description(project_path: Path) -> bool:
     desc = desc.strip()
     return bool(desc) and len(desc) <= DESCRIPTION_MAX_CHARS
 
+
 REQUIRED_WIKI_PAGES = ("Home.md", "Architecture.md", "Getting-Started.md", "Operations.md")
 WIKI_MIN_CHARS = 80
+
 
 def check_wiki(project_path: Path) -> bool:
     """Verifica wiki/ con las páginas mínimas de RULES.md §5.9, rellenas (no stubs)."""
@@ -191,6 +209,7 @@ def check_wiki(project_path: Path) -> bool:
             return False
     return True
 
+
 def check_contexto(project_path: Path) -> bool:
     """Verifica contexto_proyecto.md con la estructura de RULES.md §5.10."""
     p = project_path / "contexto_proyecto.md"
@@ -204,12 +223,14 @@ def check_contexto(project_path: Path) -> bool:
     has_route = re.search(r"^## Ruta: `[^`]+`", txt, re.MULTILINE)
     return bool(has_summary and has_files and has_route)
 
+
 def check_agents_md(project_path: Path) -> bool:
     """Verifica AGENTS.md en la raíz que declara dev-standards (RULES.md §5.11)."""
     p = project_path / "AGENTS.md"
     if not p.is_file():
         return False
     return "dev-standards" in p.read_text(encoding="utf-8", errors="ignore")
+
 
 def check_graft(project_path: Path) -> bool:
     """Verifica el wiring de Graft y que su caché graft/ no se versione (RULES.md §9)."""
@@ -228,14 +249,17 @@ def check_graft(project_path: Path) -> bool:
     lines = {ln.strip() for ln in gi.read_text(encoding="utf-8", errors="ignore").splitlines()}
     return bool(lines & {"/graft/", "graft/", "/graft"})
 
+
 def check_file_exists(project_path: Path, name: str) -> bool:
     return (project_path / name).exists()
+
 
 def check_ci(project_path: Path) -> bool:
     wf = project_path / ".github" / "workflows"
     if not wf.exists():
         return False
     return any(wf.glob("*.yml")) or any(wf.glob("*.yaml"))
+
 
 def check_secret_scan(project_path: Path) -> bool:
     """Verifica guardarraíl de secretos: script + pre-commit + job en CI (RULES.md §6.2)."""
@@ -254,20 +278,91 @@ def check_secret_scan(project_path: Path) -> bool:
             continue
     return False
 
-def scan_code_patterns(project_path: Path) -> Dict[str, bool]:
+
+def scan_code_patterns(project_path: Path) -> dict[str, bool]:
     """Escanea patrones de código para RULES §1-4 (optimizado)."""
     patterns = {
-        "has_retry_backoff": [r"backoff", r"exponential.*retry", r"retry.*exponential", r"p-limit", r"Semaphore", r"async.*retry", r"tenacity"],
-        "has_fallback_chain": [r"fallback", r"fall-back", r"try.*catch.*continue", r"model.*chain", r"alternative.*model"],
-        "has_async": [r"async\s+def", r"async\s+function", r"await\s+", r"Promise\.", r"asyncio\.", r"threading\.Thread", r"ThreadPoolExecutor"],
-        "has_progress": [r"progress", r"callback.*progres", r"tqdm", r"rich\.progress", r"ProgressBar", r"status\.json"],
-        "has_error_classification": [r"classify.*error", r"error.*classif", r"\bAuth\b", r"\bRateLimit\b", r"\bNotFound\b", r"\bTimeout\b", r"\b401\b", r"\b429\b", r"\b503\b"],
-        "has_cache": [r"\bcache\b", r"\bCache\b", r"\bLRU\b", r"\bRedis\b", r"\bIndexedDB\b", r"\bTTL\b", r"memoize", r"lru_cache"],
-        "has_streaming": [r"\bstream\b", r"\bStream\b", r"BytesIO", r"io\.BytesIO", r"pipeline", r"generator", r"\byield\b"],
-        "has_port_control": [r"EADDRINUSE", r"port.*in.use", r"listen.*port", r"server.*close", r"process\.exit"],
-        "has_db_robustness": [r"busy_timeout", r"PRAGMA", r"transaction", r"idempotent", r"migration", r"schema.*check", r"runCatching"],
+        "has_retry_backoff": [
+            r"backoff",
+            r"exponential.*retry",
+            r"retry.*exponential",
+            r"p-limit",
+            r"Semaphore",
+            r"async.*retry",
+            r"tenacity",
+        ],
+        "has_fallback_chain": [
+            r"fallback",
+            r"fall-back",
+            r"try.*catch.*continue",
+            r"model.*chain",
+            r"alternative.*model",
+        ],
+        "has_async": [
+            r"async\s+def",
+            r"async\s+function",
+            r"await\s+",
+            r"Promise\.",
+            r"asyncio\.",
+            r"threading\.Thread",
+            r"ThreadPoolExecutor",
+        ],
+        "has_progress": [
+            r"progress",
+            r"callback.*progres",
+            r"tqdm",
+            r"rich\.progress",
+            r"ProgressBar",
+            r"status\.json",
+        ],
+        "has_error_classification": [
+            r"classify.*error",
+            r"error.*classif",
+            r"\bAuth\b",
+            r"\bRateLimit\b",
+            r"\bNotFound\b",
+            r"\bTimeout\b",
+            r"\b401\b",
+            r"\b429\b",
+            r"\b503\b",
+        ],
+        "has_cache": [
+            r"\bcache\b",
+            r"\bCache\b",
+            r"\bLRU\b",
+            r"\bRedis\b",
+            r"\bIndexedDB\b",
+            r"\bTTL\b",
+            r"memoize",
+            r"lru_cache",
+        ],
+        "has_streaming": [
+            r"\bstream\b",
+            r"\bStream\b",
+            r"BytesIO",
+            r"io\.BytesIO",
+            r"pipeline",
+            r"generator",
+            r"\byield\b",
+        ],
+        "has_port_control": [
+            r"EADDRINUSE",
+            r"port.*in.use",
+            r"listen.*port",
+            r"server.*close",
+            r"process\.exit",
+        ],
+        "has_db_robustness": [
+            r"busy_timeout",
+            r"PRAGMA",
+            r"transaction",
+            r"idempotent",
+            r"migration",
+            r"schema.*check",
+            r"runCatching",
+        ],
     }
-    results = {k: False for k in patterns}
+    results = dict.fromkeys(patterns, False)
     code_ext = {".py", ".js", ".ts", ".tsx", ".jsx", ".mjs", ".cjs", ".go", ".rs", ".java", ".kt"}
     try:
         # Limit to first 30 code files per project for speed
@@ -290,6 +385,7 @@ def scan_code_patterns(project_path: Path) -> Dict[str, bool]:
     except Exception:
         pass
     return results
+
 
 def audit_project(project_path: Path) -> ProjectAudit:
     name = project_path.name
@@ -386,16 +482,19 @@ def audit_project(project_path: Path) -> ProjectAudit:
         details={"language": lang},
     )
 
-def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
+
+def generate_report(audits: list[ProjectAudit], output_path: Path) -> None:
     """Genera reporte Markdown estilo AUDIT_REPORT.md."""
     lines = [
         f"# REPORTE DE AUDITORÍA AUTOMATIZADA - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
         "",
         f"Total proyectos auditados: {len(audits)}",
-        f"Promedio score: {sum(a.score for a in audits) / len(audits):.1f}/100" if audits else "N/A",
+        f"Promedio score: {sum(a.score for a in audits) / len(audits):.1f}/100"
+        if audits
+        else "N/A",
         "",
         "---",
-        ""
+        "",
     ]
     for a in sorted(audits, key=lambda x: -x.score):
         status = "✅" if a.score >= 80 else ("⚠️" if a.score >= 50 else "❌")
@@ -440,22 +539,28 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
     output_path.write_text("\n".join(lines), encoding="utf-8")
     print(f"Reporte generado: {output_path}")
 
-def load_baseline(baseline_path: Path) -> Dict[str, int]:
+
+def load_baseline(baseline_path: Path) -> dict[str, int]:
     """Carga línea base de scores previos (JSON)."""
     if baseline_path.exists():
-        return json.loads(baseline_path.read_text(encoding="utf-8"))
+        data: dict[str, int] = json.loads(baseline_path.read_text(encoding="utf-8"))
+        return data
     return {}
 
-def save_baseline(baseline_path: Path, audits: List[ProjectAudit]) -> None:
+
+def save_baseline(baseline_path: Path, audits: list[ProjectAudit]) -> None:
     data = {a.name: a.score for a in audits}
     baseline_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
-def main():
+
+def main() -> None:
     parser = argparse.ArgumentParser(description="Auditoría dev-standards")
     parser.add_argument("--root", default="D:\\Projects", help="Directorio raíz de proyectos")
     parser.add_argument("--output", default="AUDIT_REPORT.md", help="Archivo de salida Markdown")
     parser.add_argument("--baseline", default="audit_baseline.json", help="Archivo JSON línea base")
-    parser.add_argument("--fail-on-regression", action="store_true", help="Exit 1 si algún proyecto baja score")
+    parser.add_argument(
+        "--fail-on-regression", action="store_true", help="Exit 1 si algún proyecto baja score"
+    )
     args = parser.parse_args()
 
     root = Path(args.root)
@@ -491,6 +596,7 @@ def main():
 
     save_baseline(Path(args.baseline), audits)
     print(f"Línea base actualizada: {args.baseline}")
+
 
 if __name__ == "__main__":
     main()

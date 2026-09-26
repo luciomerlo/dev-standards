@@ -59,7 +59,9 @@ def call_modal_function(app_name: str, function_name: str, **kwargs: Any) -> Any
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--app", required=True)
     parser.add_argument("--function", required=True)
     parser.add_argument("--payload", required=True, help="JSON con los kwargs de la función")
@@ -72,7 +74,9 @@ def main() -> int:
         print(str(e), file=sys.stderr)
         return 1
 
-    print(json.dumps(result, indent=2, ensure_ascii=False) if not isinstance(result, str) else result)
+    print(
+        json.dumps(result, indent=2, ensure_ascii=False) if not isinstance(result, str) else result
+    )
     return 0
 
 
