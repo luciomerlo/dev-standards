@@ -8,6 +8,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 
 | Artefacto | Rol |
 |-----------|-----|
+| [AGENTS.md](../AGENTS.md) | Estándares externos, con sus versiones fijadas, que aplican los repos consumidores (§5.11) |
 | [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§9) |
 | [docs/code-standards.md](../docs/code-standards.md) | Nomenclatura, lint, testing, review |
 | [docs/commit-conventions.md](../docs/commit-conventions.md) | Conventional Commits, branches, PRs |

@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- RULES.md §5.11: repositories that use dev-standards as a knowledge base carry an `AGENTS.md` (plus
+  `CLAUDE.md` importing it) that declares dev-standards and lists the external standards to apply
+  (`apple-design-skill` §8, Graft §9, `/fix` §3.4). §8.2 now states that the apple-design obligation
+  propagates to every consuming repo with a dashboard. Root `AGENTS.md` holds the canonical list and
+  pinned versions. `bootstrap-project.sh` gains `--dashboard` (adds the pinned submodule) and writes
+  `AGENTS.md`/`CLAUDE.md`; `audit-standards.py` gains `check_agents_md()`.
 - This repository adopts RULES.md §8: `dickwu/apple-design-skill` added as a git submodule at
   `.claude/skills/apple-design`, pinned to `39ea3fb`, so Claude Code exposes `/apple-design`.
   `generate-contexto.py` now skips every path listed in `.gitmodules`.

@@ -41,7 +41,7 @@ graph TD
 | §2 | Retry/backoff, fallback multi-modelo, BD local, puertos |
 | §3 | Zero-disk I/O, async, caché multinivel, pasada de rendimiento `/fix` al cerrar el desarrollo inicial |
 | §4 | Clasificación de errores, evidencia, `status.json` |
-| §5 | SemVer, CHANGELOG, higiene, pins, README, bootstrap, auditoría, descripción, Wiki, contexto LLM |
+| §5 | SemVer, CHANGELOG, higiene, pins, README, bootstrap, auditoría, descripción, Wiki, contexto LLM, `AGENTS.md` con estándares externos |
 | §6 | Prohibición de secretos hardcodeados, escaneo automatizado, falsos positivos, `.env` |
 | §7 | Detección de CUDA, los 5 backends de cómputo, selección de UI/CLI, exclusión de modelos de difusión, implementación de referencia |
 | §8 | Estética de dashboards: `apple-design-skill` (Apple HIG) fijado por commit, revisión obligatoria en PR, mínimos de contraste/tamaño/color/gráficos, anti-plantilla, tokens |

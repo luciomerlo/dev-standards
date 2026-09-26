@@ -32,6 +32,10 @@ El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` 
 python scripts/generate-contexto.py
 ```
 
+### Check de AGENTS.md (§5.11)
+
+`check_agents_md()` exige un `AGENTS.md` en la raíz que mencione `dev-standards`. No verifica que el submódulo de `apple-design-skill` exista, porque el auditor no puede saber si el repo tiene un dashboard; esa parte se revisa en el PR.
+
 ### Check de Graft (§9)
 
 `check_graft()` exige `.claude/skills/graft/SKILL.md` o una entrada `graft` en `mcpServers` de `.mcp.json`, y `/graft/` en `.gitignore` para que el caché no se versione. No valida la versión instalada ni que el grafo esté actualizado; para eso, `graft check` en local.

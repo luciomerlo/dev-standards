@@ -8,7 +8,7 @@
   - Frameworks y plataforma: Docker, GitHub Actions, pre-commit, commitlint, config.yaml como fuente única de configuración.
   - Dependencias principales: pytest>=7.4, ruff>=0.1, mypy>=1.5, pre-commit>=3.3.
 
-- Árbol de directorios y archivos relevantes (49 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
+- Árbol de directorios y archivos relevantes (51 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
 
 ```text
 .
@@ -52,7 +52,9 @@
 ├── .gitignore
 ├── .mcp.json
 ├── .pre-commit-config.yaml
+├── AGENTS.md
 ├── CHANGELOG.md
+├── CLAUDE.md
 ├── CONVERSACIONES.md
 ├── Dockerfile
 ├── GOODBYESERENA.md
@@ -907,6 +909,29 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+```
+
+## Ruta: `AGENTS.md`
+
+```markdown
+# AGENTS.md — dev-standards
+
+Este repositorio es la base de conocimiento de ingeniería del ecosistema. La fuente de verdad es [RULES.md](RULES.md). Todo repositorio que lo use como base aplica las reglas de RULES.md y, además, los **estándares externos** de esta tabla, en las versiones fijadas.
+
+## Estándares externos a aplicar en repos consumidores
+
+| Estándar | Regla | Aplica a | Versión fijada | Cómo se instala en el repo consumidor |
+|----------|-------|----------|----------------|---------------------------------------|
+| [`dickwu/apple-design-skill`](https://github.com/dickwu/apple-design-skill) | §8 | Repos con dashboard, panel o vista de datos | commit `39ea3fbab3011e0798c076dbeabf4917001499da` | `git submodule add https://github.com/dickwu/apple-design-skill.git .claude/skills/apple-design` y luego `git -C .claude/skills/apple-design checkout 39ea3fb…`; o `bootstrap-project.sh --dashboard` |
+| [`trailhq/Graft`](https://github.com/trailhq/Graft) (`@nanonets/graft`) | §9 | Todo repo con código fuente | `0.19.0` | `npm install -g @nanonets/graft@0.19.0 && graft init --agents claude --no-global` |
+| Skill `/fix` | §3.4 | Repos con interfaz web | — | Se corre al cerrar el desarrollo inicial, antes del primer release |
+
+Cambiar una versión fijada es un cambio explícito en este repo: actualizar esta tabla, la regla correspondiente de RULES.md, las constantes de `scripts/bootstrap-project.sh` (`APPLE_DESIGN_COMMIT`, `GRAFT_VERSION`) y el CHANGELOG, todo en el mismo cambio.
+
+## Qué hacer como agente
+
+- **Trabajando en un repo consumidor:** leer su `AGENTS.md` (§5.11) y aplicar los estándares de la tabla que correspondan. Si el repo tiene un dashboard y no tiene `.claude/skills/apple-design`, proponer instalarlo en el mismo cambio. Todo PR que toque un dashboard lleva la revisión de `/apple-design`, y sus hallazgos Critical bloquean el merge.
+- **Trabajando en dev-standards:** este repo aplica sus propios estándares. `apple-design-skill` está como submódulo en `.claude/skills/apple-design` (clonar con `--recurse-submodules`) y Graft está conectado (`graft ask` antes de leer código). Todo cambio de reglas actualiza `wiki/`, `CHANGELOG.md` y `contexto_proyecto.md` en el mismo commit.
 ```
 
 ## Ruta: `another_test.txt`
@@ -15925,6 +15950,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- RULES.md §5.11: repositories that use dev-standards as a knowledge base carry an `AGENTS.md` (plus
+  `CLAUDE.md` importing it) that declares dev-standards and lists the external standards to apply
+  (`apple-design-skill` §8, Graft §9, `/fix` §3.4). §8.2 now states that the apple-design obligation
+  propagates to every consuming repo with a dashboard. Root `AGENTS.md` holds the canonical list and
+  pinned versions. `bootstrap-project.sh` gains `--dashboard` (adds the pinned submodule) and writes
+  `AGENTS.md`/`CLAUDE.md`; `audit-standards.py` gains `check_agents_md()`.
 - This repository adopts RULES.md §8: `dickwu/apple-design-skill` added as a git submodule at
   `.claude/skills/apple-design`, pinned to `39ea3fb`, so Claude Code exposes `/apple-design`.
   `generate-contexto.py` now skips every path listed in `.gitmodules`.
@@ -15989,6 +16020,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Initial release scaffold
+```
+
+## Ruta: `CLAUDE.md`
+
+```markdown
+@AGENTS.md
 ```
 
 ## Ruta: `commitlint.config.js`
@@ -17295,6 +17332,7 @@ graph TD
 
 | Archivo / carpeta | Rol |
 |---|---|
+| [`AGENTS.md`](AGENTS.md) | Instrucciones para agentes y **lista canónica de estándares externos** que aplican los repos consumidores: `apple-design-skill` (§8), Graft (§9), `/fix` (§3.4) |
 | [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7), estética de dashboards con Apple HIG (§8), grafo de contexto Graft (§9) |
 | [`contexto_proyecto.md`](contexto_proyecto.md) | Base de código consolidada para un LLM posterior (§5.10). Regenerar con `scripts/generate-contexto.py` |
 | [`docs/code-standards.md`](docs/code-standards.md) | Nomenclatura, formato, testing, checklist de revisión |
@@ -17422,11 +17460,12 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
 *   **5.3. Higiene de Repositorios y Artefactos:** Excluir explícitamente mediante `.gitignore` directorios de datos generados (`data/`, `build/`, directorios de descargas, cachés de lenguaje, entornos virtuales y archivos binarios pesados o manuales), desacoplando estrictamente el código fuente de los artefactos transitorios.
 *   **5.4. Sincronización de Dependencias y Entornos:** Versionar y fijar (*pin*) dependencias críticas de motores externos o binarios de terceros cuando se identifiquen regresiones. Especificar restricciones estrictas de versiones del entorno de ejecución (ej. campo `engines` en Node.js) alineadas con flujos de CI multiversión.
 *   **5.5. README Ilustrativo y Badges:** Cada `README.md` debe incluir: (a) badges de estado (CI, versión, licencia, cobertura), (b) al menos un diagrama de arquitectura o flujo (Mermaid renderizado como SVG/PNG), (c) capturas de pantalla o GIFs de la UI/CLI cuando aplique, y (d) sección "Estándares aplicados" con checklist visual.
-*   **5.6. Scaffolding Obligatorio:** Existe un script de arranque (`scripts/bootstrap-project.sh` o equivalente) que genera en cualquier repo nuevo: `README.md` plantilla, `CHANGELOG.md` (Keep a Changelog), `pyproject.toml`/`package.json` con `version = "0.1.0"`, `.gitignore`, `Dockerfile`, `.github/workflows/ci.yml`, `.env.example`, `config.yaml` (SSoT), el directorio `wiki/` con las páginas mínimas de §5.9, y `contexto_proyecto.md` generado con `scripts/generate-contexto.py` (§5.10). Su uso es obligatorio al crear un repositorio.
+*   **5.6. Scaffolding Obligatorio:** Existe un script de arranque (`scripts/bootstrap-project.sh` o equivalente) que genera en cualquier repo nuevo: `README.md` plantilla, `CHANGELOG.md` (Keep a Changelog), `pyproject.toml`/`package.json` con `version = "0.1.0"`, `.gitignore`, `Dockerfile`, `.github/workflows/ci.yml`, `.env.example`, `config.yaml` (SSoT), el directorio `wiki/` con las páginas mínimas de §5.9, y `contexto_proyecto.md` generado con `scripts/generate-contexto.py` (§5.10), `AGENTS.md` + `CLAUDE.md` (§5.11), el wiring de Graft (§9) y, con `--dashboard`, el submódulo de `apple-design-skill` (§8.2). Su uso es obligatorio al crear un repositorio.
 *   **5.7. Auditoría Periódica Automatizada:** Un job programado (GitHub Actions `schedule` mensual o cron externo) ejecuta `scripts/audit-standards.py` que valida: presencia de versión SemVer, CHANGELOG, README con imágenes, Wiki (`wiki/` con páginas mínimas rellenas), contexto consolidado (`contexto_proyecto.md`, §5.10), `.gitignore`, Dockerfile, CI, y cumplimiento de RULES.md §1‑4. Genera reporte en `AUDIT_REPORT.md` y abre issue si hay regresiones.
 *   **5.8. Descripción del Repositorio:** Todo repositorio debe tener una descripción (campo "description" del hosting, ej. GitHub), en inglés, de máximo 350 caracteres. Debe crearse al crear `README.md` y actualizarse cada vez que `README.md` cambie, manteniéndola alineada con el propósito vigente del proyecto.
 *   **5.9. Wiki del Repositorio:** Todo repositorio debe tener su propia Wiki, versionada en el directorio `wiki/` (Markdown compatible con GitHub Wiki). Debe crearse junto al `README.md` (bootstrap §5.6) y actualizarse en el **mismo cambio** que altere propósito, arquitectura, uso, operación o forma de contribuir. El `README.md` es la puerta de entrada; la Wiki es el conocimiento operativo vivo (onboarding, arquitectura, runbook, troubleshooting) y no puede quedar en plantillas vacías ni desactualizada respecto al código. Páginas mínimas obligatorias: `Home.md` (índice y propósito), `Architecture.md`, `Getting-Started.md`, `Operations.md`. El README debe enlazar a `wiki/Home.md`. Publicar esas páginas al Wiki tab de GitHub (`<repo>.wiki.git`) es opcional; `wiki/` en el árbol del repo es la fuente de verdad.
 *   **5.10. Contexto consolidado del proyecto (`contexto_proyecto.md`):** Tan pronto como sea posible debe existir, en la raíz, un único archivo `contexto_proyecto.md` optimizado para que un motor de LLM posterior entienda la base de código completa. En un repositorio nuevo se genera al cerrar el scaffolding (§5.6); en uno existente, en el primer cambio que toque el árbol. Se regenera en el **mismo cambio** que altere código, configuración o documentación normativa (`python scripts/generate-contexto.py`), de modo que se mantenga actualizado. La implementación de referencia es `scripts/generate-contexto.py`; el bootstrap la copia y la ejecuta. Estructura estricta: (1) `# RESUMEN Y ARQUITECTURA`, con el propósito general, el stack tecnológico (lenguajes, frameworks y dependencias principales) y un árbol de directorios y archivos relevantes, excluyendo carpetas de build, binarios y dependencias (`node_modules`, `bin`, `obj`, `.git`, `venv`, `.venv`, `dist`, `build`, `target`, `__pycache__` y equivalentes); (2) `# ARCHIVOS DEL PROYECTO`, y por cada archivo de código o configuración relevante un apartado `## Ruta:` con la ruta relativa (por ejemplo `camino/al/archivo.ext`) seguido de un bloque con el lenguaje y el **contenido completo**, sin omisiones. Los Markdown versionados que definen el sistema (README, CHANGELOG, reglas, `docs/`, `wiki/` y demás `.md` de producto) entran en ese volcado. No se incluye el propio `contexto_proyecto.md` ni salidas generadas de auditoría (`AUDIT_REPORT.md` y resúmenes CSV); esos artefactos pueden nombrarse en el árbol como excluidos.
+*   **5.11. Instrucciones para Agentes (`AGENTS.md`):** Todo repositorio que use dev-standards como base de conocimiento tiene en la raíz un `AGENTS.md` que lo declara y enlaza `RULES.md`, y lista los estándares externos que los agentes deben aplicar: `apple-design-skill` para dashboards (§8), Graft (§9) y `/fix` (§3.4). Incluye además un `CLAUDE.md` que lo importa (`@AGENTS.md`). El bootstrap (§5.6) genera ambos, y `audit-standards.py` verifica que `AGENTS.md` exista y referencie dev-standards. La lista canónica de estándares externos, con sus versiones fijadas, está en el `AGENTS.md` de este repositorio.
 
 ---
 
@@ -17459,7 +17498,7 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
 ## 8. Estética de Dashboards (Apple HIG)
 
 *   **8.1. Estándar de Referencia:** Todo dashboard, panel de control o vista de datos de un proyecto (HTML/React, Streamlit, Tauri/Electron, apps móviles, Looker Studio, Grafana o equivalente) se diseña y revisa con el skill [`dickwu/apple-design-skill`](https://github.com/dickwu/apple-design-skill), fijado al commit `39ea3fbab3011e0798c076dbeabf4917001499da` (2026-09-22). El skill contiene 123 páginas de las Human Interface Guidelines de Apple, más un lente de diseño que detecta estética de plantilla. Actualizar el pin es un cambio explícito que se registra en el CHANGELOG.
-*   **8.2. Instalación (no se vendoriza):** El texto de las guías pertenece a Apple Inc. y el repositorio del skill no declara licencia. Por eso **no se copia** a los repositorios; se instala por proyecto con `npx skills add dickwu/apple-design-skill` (usar `-a claude-code` si solo se instala para Claude Code), o se agrega como submódulo fijado al commit de §8.1. Para Claude Code, la ruta recomendada del submódulo es `.claude/skills/apple-design`, donde el skill se detecta solo y queda disponible como `/apple-design`. Para otros agentes, `.design-rules/`. Un submódulo solo versiona el puntero al commit, no el texto de Apple. `generate-contexto.py` excluye los submódulos del volcado y Graft los ignora por defecto. Este repositorio aplica la variante `.claude/skills/apple-design`.
+*   **8.2. Instalación (no se vendoriza):** El texto de las guías pertenece a Apple Inc. y el repositorio del skill no declara licencia. Por eso **no se copia** a los repositorios; se instala por proyecto con `npx skills add dickwu/apple-design-skill` (usar `-a claude-code` si solo se instala para Claude Code), o se agrega como submódulo fijado al commit de §8.1. Para Claude Code, la ruta recomendada del submódulo es `.claude/skills/apple-design`, donde el skill se detecta solo y queda disponible como `/apple-design`. Para otros agentes, `.design-rules/`. Un submódulo solo versiona el puntero al commit, no el texto de Apple. `generate-contexto.py` excluye los submódulos del volcado y Graft los ignora por defecto. Este repositorio aplica la variante `.claude/skills/apple-design`. **La obligación se propaga:** todo repositorio que use dev-standards como base y tenga un dashboard instala el skill de esta forma (`bootstrap-project.sh --dashboard` lo hace solo) y lo declara en su `AGENTS.md` (§5.11). Si un repositorio agrega un dashboard después del bootstrap, lo instala en ese mismo cambio.
 *   **8.3. Revisión Obligatoria:** Todo PR que cree o modifique un dashboard incluye una revisión con el skill, en el formato de su `SKILL.md`: Summary, Critical, Improvements, Craft notes, What works, Platform notes. Cada hallazgo lleva severidad (Critical/High/Medium/Low) y cita `archivo.md › Heading`. Los hallazgos **Critical** bloquean el merge. Además del set que el skill carga siempre (`accessibility.md`, `layout.md`, `typography.md`, `color.md`, la página de plataforma y `cross-platform.md`), en dashboards se cargan `charting-data.md`, `charts.md`, `dark-mode.md` y, según lo que haya en pantalla, `gauges.md`, `lists-and-tables.md`, `sidebars.md`, `widgets.md`, `materials.md` y `loading.md`.
 *   **8.4. Alcance según Plataforma:** En dashboards web o Android aplican los ocho principios de diseño y los fundamentos (accesibilidad, color, tipografía, layout, escritura), pero no las convenciones de plataforma de Apple (tab bars, menu bar, sheets). En dashboards nativos iOS/iPadOS/macOS o empaquetados con Tauri/Electron aplican también las convenciones de plataforma.
 *   **8.5. Mínimos No Negociables** (resumen del skill; ante cualquier discrepancia prevalecen el skill y la página HIG citada):
@@ -17504,6 +17543,7 @@ y valida la presencia de:
   - Descripción del repo en GitHub no vacía y de ≤350 caracteres (RULES.md §5.8)
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
   - contexto_proyecto.md con la estructura de RULES.md §5.10
+  - AGENTS.md que referencia dev-standards (RULES.md §5.11)
   - Wiring de Graft (skill o .mcp.json) con graft/ fuera de git (RULES.md §9)
   - .gitignore
   - Dockerfile
@@ -17537,6 +17577,7 @@ class ProjectAudit:
     has_wiki: bool
     has_contexto: bool
     has_graft: bool
+    has_agents_md: bool
     has_gitignore: bool
     has_dockerfile: bool
     has_ci: bool
@@ -17693,6 +17734,13 @@ def check_contexto(project_path: Path) -> bool:
     has_route = re.search(r"^## Ruta: `[^`]+`", txt, re.MULTILINE)
     return bool(has_summary and has_files and has_route)
 
+def check_agents_md(project_path: Path) -> bool:
+    """Verifica AGENTS.md en la raíz que declara dev-standards (RULES.md §5.11)."""
+    p = project_path / "AGENTS.md"
+    if not p.is_file():
+        return False
+    return "dev-standards" in p.read_text(encoding="utf-8", errors="ignore")
+
 def check_graft(project_path: Path) -> bool:
     """Verifica el wiring de Graft y que su caché graft/ no se versione (RULES.md §9)."""
     wired = (project_path / ".claude" / "skills" / "graft" / "SKILL.md").is_file()
@@ -17785,6 +17833,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
     has_wiki = check_wiki(project_path)
     has_contexto = check_contexto(project_path)
     has_graft = check_graft(project_path)
+    has_agents_md = check_agents_md(project_path)
     has_gitignore = check_file_exists(project_path, ".gitignore")
     has_dockerfile = check_file_exists(project_path, "Dockerfile")
     has_ci = check_ci(project_path)
@@ -17801,6 +17850,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_wiki": 5,
         "has_contexto": 5,
         "has_graft": 5,
+        "has_agents_md": 5,
         "has_gitignore": 5,
         "has_dockerfile": 5,
         "has_ci": 10,
@@ -17825,6 +17875,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_wiki": has_wiki,
         "has_contexto": has_contexto,
         "has_graft": has_graft,
+        "has_agents_md": has_agents_md,
         "has_gitignore": has_gitignore,
         "has_dockerfile": has_dockerfile,
         "has_ci": has_ci,
@@ -17845,6 +17896,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_wiki=has_wiki,
         has_contexto=has_contexto,
         has_graft=has_graft,
+        has_agents_md=has_agents_md,
         has_gitignore=has_gitignore,
         has_dockerfile=has_dockerfile,
         has_ci=has_ci,
@@ -17890,6 +17942,7 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("Wiki (wiki/ §5.9)", a.has_wiki),
             ("contexto_proyecto.md (§5.10)", a.has_contexto),
             ("Graft (§9)", a.has_graft),
+            ("AGENTS.md (§5.11)", a.has_agents_md),
             (".gitignore", a.has_gitignore),
             ("Dockerfile", a.has_dockerfile),
             ("CI/CD", a.has_ci),
@@ -17978,7 +18031,7 @@ if __name__ == "__main__":
 ```bash
 #!/usr/bin/env bash
 # bootstrap-project.sh — Scaffolding estándar para nuevos repositorios (RULES.md §5.6)
-# Uso:  bash bootstrap-project.sh [--lang python|node|go|rust] [--name "Mi Proyecto"] [--desc "Descripción breve"]
+# Uso:  bash bootstrap-project.sh [--lang python|node|go|rust] [--name "Mi Proyecto"] [--desc "Descripción breve"] [--dashboard]
 #       Se ejecuta DENTRO de la carpeta del nuevo repo (git init ya hecho).
 
 set -euo pipefail
@@ -17986,13 +18039,20 @@ set -euo pipefail
 LANG="python"
 PROJECT_NAME=""
 PROJECT_DESC=""
+HAS_DASHBOARD=0
 REPO_ROOT="$(pwd)"
+
+# Estándares externos fijados (RULES.md §8.1, §9.1)
+APPLE_DESIGN_URL="https://github.com/dickwu/apple-design-skill.git"
+APPLE_DESIGN_COMMIT="39ea3fbab3011e0798c076dbeabf4917001499da"
+GRAFT_VERSION="0.19.0"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --lang) LANG="$2"; shift 2 ;;
     --name) PROJECT_NAME="$2"; shift 2 ;;
     --desc) PROJECT_DESC="$2"; shift 2 ;;
+    --dashboard) HAS_DASHBOARD=1; shift ;;
     *) echo "Opción desconocida: $1"; exit 1 ;;
   esac
 done
@@ -18810,8 +18870,38 @@ if command -v graft >/dev/null 2>&1; then
   (cd "$REPO_ROOT" && DO_NOT_TRACK=1 graft init --agents claude --no-global) \
     || echo "⚠️  graft init falló: reintenta con graft init --agents claude --no-global (RULES.md §9.2)"
 else
-  echo "⚠️  Graft no instalado: npm install -g @nanonets/graft@0.19.0 && graft init --agents claude --no-global (RULES.md §9.2)"
+  echo "⚠️  Graft no instalado: npm install -g @nanonets/graft@${GRAFT_VERSION} && graft init --agents claude --no-global (RULES.md §9.2)"
 fi
+
+# 10c) apple-design-skill para dashboards (RULES.md §8.2), solo con --dashboard
+if (( HAS_DASHBOARD )); then
+  if git -C "$REPO_ROOT" submodule add -q "$APPLE_DESIGN_URL" .claude/skills/apple-design \
+     && git -C "$REPO_ROOT/.claude/skills/apple-design" checkout -q "$APPLE_DESIGN_COMMIT"; then
+    git -C "$REPO_ROOT" add .gitmodules .claude/skills/apple-design
+    echo "🎨  apple-design-skill agregado como submódulo fijado a ${APPLE_DESIGN_COMMIT:0:7} (RULES.md §8)"
+  else
+    echo "⚠️  No se pudo agregar apple-design-skill: git submodule add $APPLE_DESIGN_URL .claude/skills/apple-design (RULES.md §8.2)"
+  fi
+fi
+
+# 10d) AGENTS.md + CLAUDE.md: estándares de dev-standards para los agentes (RULES.md §5.11)
+if (( HAS_DASHBOARD )); then
+  DASHBOARD_LINE="- **Dashboards (§8):** todo PR que cree o modifique un dashboard incluye la revisión de \`/apple-design\` (submódulo \`.claude/skills/apple-design\`). Los hallazgos Critical bloquean el merge."
+else
+  DASHBOARD_LINE="- **Dashboards (§8):** si se agrega un dashboard, instalar \`apple-design-skill\` como submódulo en \`.claude/skills/apple-design\` (fijado a \`${APPLE_DESIGN_COMMIT:0:7}\`) y revisar con \`/apple-design\` cada PR que lo toque."
+fi
+cat > AGENTS.md <<EOF
+# AGENTS.md — $PROJECT_NAME
+
+Este repositorio sigue [dev-standards](https://github.com/luciomerlo/dev-standards) ([RULES.md](https://github.com/luciomerlo/dev-standards/blob/main/RULES.md)). Antes de proponer o hacer cambios, aplicar:
+
+$DASHBOARD_LINE
+- **Graft (§9):** usar \`graft ask\` / \`graft callers\` antes de leer o cambiar código. El wiring se versiona en \`.claude/\` y \`.mcp.json\`; \`graft/\` no se versiona.
+- **Rendimiento (§3.4):** con interfaz web, sugerir \`/fix\` al cerrar el desarrollo inicial, antes del primer release.
+- **Contexto (§5.10) y Wiki (§5.9):** regenerar \`contexto_proyecto.md\` y actualizar \`wiki/\` en el mismo cambio que altere código, uso o arquitectura.
+- **Secretos (§6):** nunca versionar credenciales; se inyectan solo por entorno.
+EOF
+[[ -f CLAUDE.md ]] || printf '@AGENTS.md\n' > CLAUDE.md
 
 # 11) contexto_proyecto.md (RULES.md §5.10)
 cp "$(dirname "${BASH_SOURCE[0]}")/generate-contexto.py" scripts/generate-contexto.py 2>/dev/null || \
@@ -20467,7 +20557,7 @@ graph TD
 | §2 | Retry/backoff, fallback multi-modelo, BD local, puertos |
 | §3 | Zero-disk I/O, async, caché multinivel, pasada de rendimiento `/fix` al cerrar el desarrollo inicial |
 | §4 | Clasificación de errores, evidencia, `status.json` |
-| §5 | SemVer, CHANGELOG, higiene, pins, README, bootstrap, auditoría, descripción, Wiki, contexto LLM |
+| §5 | SemVer, CHANGELOG, higiene, pins, README, bootstrap, auditoría, descripción, Wiki, contexto LLM, `AGENTS.md` con estándares externos |
 | §6 | Prohibición de secretos hardcodeados, escaneo automatizado, falsos positivos, `.env` |
 | §7 | Detección de CUDA, los 5 backends de cómputo, selección de UI/CLI, exclusión de modelos de difusión, implementación de referencia |
 | §8 | Estética de dashboards: `apple-design-skill` (Apple HIG) fijado por commit, revisión obligatoria en PR, mínimos de contraste/tamaño/color/gráficos, anti-plantilla, tokens |
@@ -20600,6 +20690,14 @@ Estética y revisión de dashboards según RULES.md §8. El estándar es el skil
 
 Commit fijado: `39ea3fbab3011e0798c076dbeabf4917001499da` (2026-09-22).
 
+## En repos que usan dev-standards como base
+
+El estándar se propaga (RULES.md §8.2, §5.11):
+
+- **Repo nuevo con dashboard:** `bash scripts/bootstrap-project.sh --dashboard …` agrega el submódulo fijado y un `AGENTS.md` que exige `/apple-design` en cada PR que toque el dashboard.
+- **Repo existente que suma un dashboard:** en ese mismo cambio, agregar el submódulo (opción B) y la línea de §8 en su `AGENTS.md`.
+- La versión fijada vigente está en el [AGENTS.md](../AGENTS.md) de dev-standards.
+
 ## Por qué no se copia a los repos
 
 El texto de las guías es de Apple Inc. y el repositorio del skill no incluye archivo de licencia. Por eso cada proyecto lo instala o lo referencia en vez de vendorizarlo.
@@ -20700,9 +20798,9 @@ bash /ruta/a/dev-standards/scripts/bootstrap-project.sh \
   --desc "Descripción breve"
 ```
 
-`--lang` acepta `python`, `node`, `go` o `rust`. Sin `--name` usa el basename del directorio.
+`--lang` acepta `python`, `node`, `go` o `rust`. Sin `--name` usa el basename del directorio. `--dashboard` agrega `apple-design-skill` como submódulo fijado (§8.2).
 
-El script genera README, CHANGELOG, manifiesto con `0.1.0`, `.gitignore`, Dockerfile, CI, `.env.example`, `config.yaml`, `wiki/` con las cuatro páginas mínimas (§5.9) y `contexto_proyecto.md` (§5.10).
+El script genera README, CHANGELOG, manifiesto con `0.1.0`, `.gitignore`, Dockerfile, CI, `.env.example`, `config.yaml`, `wiki/` con las cuatro páginas mínimas (§5.9), `contexto_proyecto.md` (§5.10) y `AGENTS.md` + `CLAUDE.md` con los estándares externos que aplican (§5.11).
 
 Después del scaffold:
 
@@ -20743,6 +20841,7 @@ No hace falta re-bootstrap si el árbol ya tiene manifiesto, CI y README. Falta 
 7. Instalar Graft (`npm install -g @nanonets/graft@0.19.0`), correr
    `graft init --agents claude --no-global` y versionar `.claude/`, `.mcp.json`,
    `.ignore` y `.gitignore` (§9).
+8. Crear `AGENTS.md` (y `CLAUDE.md` con `@AGENTS.md`) que declare dev-standards y liste los estándares externos que aplican. Si hay un dashboard, agregar `apple-design-skill` como submódulo en `.claude/skills/apple-design` (§5.11, §8.2, [Dashboards](Dashboards.md)).
 
 ## Añadir o cambiar un estándar
 
@@ -20835,6 +20934,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 
 | Artefacto | Rol |
 |-----------|-----|
+| [AGENTS.md](../AGENTS.md) | Estándares externos, con sus versiones fijadas, que aplican los repos consumidores (§5.11) |
 | [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§9) |
 | [docs/code-standards.md](../docs/code-standards.md) | Nomenclatura, lint, testing, review |
 | [docs/commit-conventions.md](../docs/commit-conventions.md) | Conventional Commits, branches, PRs |
@@ -20905,6 +21005,10 @@ El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` 
 ```bash
 python scripts/generate-contexto.py
 ```
+
+### Check de AGENTS.md (§5.11)
+
+`check_agents_md()` exige un `AGENTS.md` en la raíz que mencione `dev-standards`. No verifica que el submódulo de `apple-design-skill` exista, porque el auditor no puede saber si el repo tiene un dashboard; esa parte se revisa en el PR.
 
 ### Check de Graft (§9)
 

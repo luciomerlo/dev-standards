@@ -13,6 +13,7 @@ y valida la presencia de:
   - Descripción del repo en GitHub no vacía y de ≤350 caracteres (RULES.md §5.8)
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
   - contexto_proyecto.md con la estructura de RULES.md §5.10
+  - AGENTS.md que referencia dev-standards (RULES.md §5.11)
   - Wiring de Graft (skill o .mcp.json) con graft/ fuera de git (RULES.md §9)
   - .gitignore
   - Dockerfile
@@ -46,6 +47,7 @@ class ProjectAudit:
     has_wiki: bool
     has_contexto: bool
     has_graft: bool
+    has_agents_md: bool
     has_gitignore: bool
     has_dockerfile: bool
     has_ci: bool
@@ -202,6 +204,13 @@ def check_contexto(project_path: Path) -> bool:
     has_route = re.search(r"^## Ruta: `[^`]+`", txt, re.MULTILINE)
     return bool(has_summary and has_files and has_route)
 
+def check_agents_md(project_path: Path) -> bool:
+    """Verifica AGENTS.md en la raíz que declara dev-standards (RULES.md §5.11)."""
+    p = project_path / "AGENTS.md"
+    if not p.is_file():
+        return False
+    return "dev-standards" in p.read_text(encoding="utf-8", errors="ignore")
+
 def check_graft(project_path: Path) -> bool:
     """Verifica el wiring de Graft y que su caché graft/ no se versione (RULES.md §9)."""
     wired = (project_path / ".claude" / "skills" / "graft" / "SKILL.md").is_file()
@@ -294,6 +303,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
     has_wiki = check_wiki(project_path)
     has_contexto = check_contexto(project_path)
     has_graft = check_graft(project_path)
+    has_agents_md = check_agents_md(project_path)
     has_gitignore = check_file_exists(project_path, ".gitignore")
     has_dockerfile = check_file_exists(project_path, "Dockerfile")
     has_ci = check_ci(project_path)
@@ -310,6 +320,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_wiki": 5,
         "has_contexto": 5,
         "has_graft": 5,
+        "has_agents_md": 5,
         "has_gitignore": 5,
         "has_dockerfile": 5,
         "has_ci": 10,
@@ -334,6 +345,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_wiki": has_wiki,
         "has_contexto": has_contexto,
         "has_graft": has_graft,
+        "has_agents_md": has_agents_md,
         "has_gitignore": has_gitignore,
         "has_dockerfile": has_dockerfile,
         "has_ci": has_ci,
@@ -354,6 +366,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_wiki=has_wiki,
         has_contexto=has_contexto,
         has_graft=has_graft,
+        has_agents_md=has_agents_md,
         has_gitignore=has_gitignore,
         has_dockerfile=has_dockerfile,
         has_ci=has_ci,
@@ -399,6 +412,7 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("Wiki (wiki/ §5.9)", a.has_wiki),
             ("contexto_proyecto.md (§5.10)", a.has_contexto),
             ("Graft (§9)", a.has_graft),
+            ("AGENTS.md (§5.11)", a.has_agents_md),
             (".gitignore", a.has_gitignore),
             ("Dockerfile", a.has_dockerfile),
             ("CI/CD", a.has_ci),

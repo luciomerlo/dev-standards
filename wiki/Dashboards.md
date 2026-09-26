@@ -4,6 +4,14 @@ Estética y revisión de dashboards según RULES.md §8. El estándar es el skil
 
 Commit fijado: `39ea3fbab3011e0798c076dbeabf4917001499da` (2026-09-22).
 
+## En repos que usan dev-standards como base
+
+El estándar se propaga (RULES.md §8.2, §5.11):
+
+- **Repo nuevo con dashboard:** `bash scripts/bootstrap-project.sh --dashboard …` agrega el submódulo fijado y un `AGENTS.md` que exige `/apple-design` en cada PR que toque el dashboard.
+- **Repo existente que suma un dashboard:** en ese mismo cambio, agregar el submódulo (opción B) y la línea de §8 en su `AGENTS.md`.
+- La versión fijada vigente está en el [AGENTS.md](../AGENTS.md) de dev-standards.
+
 ## Por qué no se copia a los repos
 
 El texto de las guías es de Apple Inc. y el repositorio del skill no incluye archivo de licencia. Por eso cada proyecto lo instala o lo referencia en vez de vendorizarlo.

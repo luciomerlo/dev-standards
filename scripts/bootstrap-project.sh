@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # bootstrap-project.sh — Scaffolding estándar para nuevos repositorios (RULES.md §5.6)
-# Uso:  bash bootstrap-project.sh [--lang python|node|go|rust] [--name "Mi Proyecto"] [--desc "Descripción breve"]
+# Uso:  bash bootstrap-project.sh [--lang python|node|go|rust] [--name "Mi Proyecto"] [--desc "Descripción breve"] [--dashboard]
 #       Se ejecuta DENTRO de la carpeta del nuevo repo (git init ya hecho).
 
 set -euo pipefail
@@ -8,13 +8,20 @@ set -euo pipefail
 LANG="python"
 PROJECT_NAME=""
 PROJECT_DESC=""
+HAS_DASHBOARD=0
 REPO_ROOT="$(pwd)"
+
+# Estándares externos fijados (RULES.md §8.1, §9.1)
+APPLE_DESIGN_URL="https://github.com/dickwu/apple-design-skill.git"
+APPLE_DESIGN_COMMIT="39ea3fbab3011e0798c076dbeabf4917001499da"
+GRAFT_VERSION="0.19.0"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --lang) LANG="$2"; shift 2 ;;
     --name) PROJECT_NAME="$2"; shift 2 ;;
     --desc) PROJECT_DESC="$2"; shift 2 ;;
+    --dashboard) HAS_DASHBOARD=1; shift ;;
     *) echo "Opción desconocida: $1"; exit 1 ;;
   esac
 done
@@ -832,8 +839,38 @@ if command -v graft >/dev/null 2>&1; then
   (cd "$REPO_ROOT" && DO_NOT_TRACK=1 graft init --agents claude --no-global) \
     || echo "⚠️  graft init falló: reintenta con graft init --agents claude --no-global (RULES.md §9.2)"
 else
-  echo "⚠️  Graft no instalado: npm install -g @nanonets/graft@0.19.0 && graft init --agents claude --no-global (RULES.md §9.2)"
+  echo "⚠️  Graft no instalado: npm install -g @nanonets/graft@${GRAFT_VERSION} && graft init --agents claude --no-global (RULES.md §9.2)"
 fi
+
+# 10c) apple-design-skill para dashboards (RULES.md §8.2), solo con --dashboard
+if (( HAS_DASHBOARD )); then
+  if git -C "$REPO_ROOT" submodule add -q "$APPLE_DESIGN_URL" .claude/skills/apple-design \
+     && git -C "$REPO_ROOT/.claude/skills/apple-design" checkout -q "$APPLE_DESIGN_COMMIT"; then
+    git -C "$REPO_ROOT" add .gitmodules .claude/skills/apple-design
+    echo "🎨  apple-design-skill agregado como submódulo fijado a ${APPLE_DESIGN_COMMIT:0:7} (RULES.md §8)"
+  else
+    echo "⚠️  No se pudo agregar apple-design-skill: git submodule add $APPLE_DESIGN_URL .claude/skills/apple-design (RULES.md §8.2)"
+  fi
+fi
+
+# 10d) AGENTS.md + CLAUDE.md: estándares de dev-standards para los agentes (RULES.md §5.11)
+if (( HAS_DASHBOARD )); then
+  DASHBOARD_LINE="- **Dashboards (§8):** todo PR que cree o modifique un dashboard incluye la revisión de \`/apple-design\` (submódulo \`.claude/skills/apple-design\`). Los hallazgos Critical bloquean el merge."
+else
+  DASHBOARD_LINE="- **Dashboards (§8):** si se agrega un dashboard, instalar \`apple-design-skill\` como submódulo en \`.claude/skills/apple-design\` (fijado a \`${APPLE_DESIGN_COMMIT:0:7}\`) y revisar con \`/apple-design\` cada PR que lo toque."
+fi
+cat > AGENTS.md <<EOF
+# AGENTS.md — $PROJECT_NAME
+
+Este repositorio sigue [dev-standards](https://github.com/luciomerlo/dev-standards) ([RULES.md](https://github.com/luciomerlo/dev-standards/blob/main/RULES.md)). Antes de proponer o hacer cambios, aplicar:
+
+$DASHBOARD_LINE
+- **Graft (§9):** usar \`graft ask\` / \`graft callers\` antes de leer o cambiar código. El wiring se versiona en \`.claude/\` y \`.mcp.json\`; \`graft/\` no se versiona.
+- **Rendimiento (§3.4):** con interfaz web, sugerir \`/fix\` al cerrar el desarrollo inicial, antes del primer release.
+- **Contexto (§5.10) y Wiki (§5.9):** regenerar \`contexto_proyecto.md\` y actualizar \`wiki/\` en el mismo cambio que altere código, uso o arquitectura.
+- **Secretos (§6):** nunca versionar credenciales; se inyectan solo por entorno.
+EOF
+[[ -f CLAUDE.md ]] || printf '@AGENTS.md\n' > CLAUDE.md
 
 # 11) contexto_proyecto.md (RULES.md §5.10)
 cp "$(dirname "${BASH_SOURCE[0]}")/generate-contexto.py" scripts/generate-contexto.py 2>/dev/null || \
