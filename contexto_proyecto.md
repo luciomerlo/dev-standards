@@ -72,7 +72,7 @@
 └── test.py
 ```
 
-- Fuera del volcado de contenido: carpetas `.git`, `.ruff_cache`, `graft`, `scripts/__pycache__`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `.ignore`, `LICENSE`.
+- Fuera del volcado de contenido: carpetas `.git`, `.ruff_cache`, `graft`, `.claude/skills/apple-design`, `scripts/__pycache__`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `.gitmodules`, `.ignore`, `LICENSE`.
 
 # ARCHIVOS DEL PROYECTO
 
@@ -15925,6 +15925,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- This repository adopts RULES.md §8: `dickwu/apple-design-skill` added as a git submodule at
+  `.claude/skills/apple-design`, pinned to `39ea3fb`, so Claude Code exposes `/apple-design`.
+  `generate-contexto.py` now skips every path listed in `.gitmodules`.
 - RULES.md §9 (Graft): every source repository is wired to [`trailhq/Graft`](https://github.com/trailhq/Graft)
   (`@nanonets/graft@0.19.0`) with `graft init --agents claude --no-global`; the wiring (`.claude/`,
   `.mcp.json`, `.ignore`) is committed, `graft/` stays a git-ignored cache, `--deep` is opt-in, telemetry
@@ -17306,6 +17309,7 @@ graph TD
 | `scripts/run_on_modal.py` | Cliente del backend `modal` ([Modal](https://modal.com), ~$30 USD/mes gratis) |
 | `scripts/transcribe_via_groq.py` | Cliente del backend `cloud-api` para proyectos basados en Whisper (Groq) |
 | `scripts/run_on_hf_inference.py` | Cliente del backend `cloud-api` para otros modelos hospedados en HF |
+| `.claude/skills/apple-design` | Submódulo fijado de [`apple-design-skill`](https://github.com/dickwu/apple-design-skill), el estándar de dashboards (§8). Clonar con `--recurse-submodules` |
 | [`wiki/`](wiki/Home.md) | Wiki operativa de este propio repo (onboarding, arquitectura, runbook) |
 
 ## Uso rápido
@@ -17455,7 +17459,7 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
 ## 8. Estética de Dashboards (Apple HIG)
 
 *   **8.1. Estándar de Referencia:** Todo dashboard, panel de control o vista de datos de un proyecto (HTML/React, Streamlit, Tauri/Electron, apps móviles, Looker Studio, Grafana o equivalente) se diseña y revisa con el skill [`dickwu/apple-design-skill`](https://github.com/dickwu/apple-design-skill), fijado al commit `39ea3fbab3011e0798c076dbeabf4917001499da` (2026-09-22). El skill contiene 123 páginas de las Human Interface Guidelines de Apple, más un lente de diseño que detecta estética de plantilla. Actualizar el pin es un cambio explícito que se registra en el CHANGELOG.
-*   **8.2. Instalación (no se vendoriza):** El texto de las guías pertenece a Apple Inc. y el repositorio del skill no declara licencia. Por eso **no se copia** a los repositorios; se instala por proyecto con `npx skills add dickwu/apple-design-skill` (usar `-a claude-code` si solo se instala para Claude Code), o se agrega como submódulo fijado en `.design-rules/` (`git submodule add https://github.com/dickwu/apple-design-skill.git .design-rules`, y luego checkout del commit de §8.1). En Claude Code queda disponible como `/apple-design`.
+*   **8.2. Instalación (no se vendoriza):** El texto de las guías pertenece a Apple Inc. y el repositorio del skill no declara licencia. Por eso **no se copia** a los repositorios; se instala por proyecto con `npx skills add dickwu/apple-design-skill` (usar `-a claude-code` si solo se instala para Claude Code), o se agrega como submódulo fijado al commit de §8.1. Para Claude Code, la ruta recomendada del submódulo es `.claude/skills/apple-design`, donde el skill se detecta solo y queda disponible como `/apple-design`. Para otros agentes, `.design-rules/`. Un submódulo solo versiona el puntero al commit, no el texto de Apple. `generate-contexto.py` excluye los submódulos del volcado y Graft los ignora por defecto. Este repositorio aplica la variante `.claude/skills/apple-design`.
 *   **8.3. Revisión Obligatoria:** Todo PR que cree o modifique un dashboard incluye una revisión con el skill, en el formato de su `SKILL.md`: Summary, Critical, Improvements, Craft notes, What works, Platform notes. Cada hallazgo lleva severidad (Critical/High/Medium/Low) y cita `archivo.md › Heading`. Los hallazgos **Critical** bloquean el merge. Además del set que el skill carga siempre (`accessibility.md`, `layout.md`, `typography.md`, `color.md`, la página de plataforma y `cross-platform.md`), en dashboards se cargan `charting-data.md`, `charts.md`, `dark-mode.md` y, según lo que haya en pantalla, `gauges.md`, `lists-and-tables.md`, `sidebars.md`, `widgets.md`, `materials.md` y `loading.md`.
 *   **8.4. Alcance según Plataforma:** En dashboards web o Android aplican los ocho principios de diseño y los fundamentos (accesibilidad, color, tipografía, layout, escritura), pero no las convenciones de plataforma de Apple (tab bars, menu bar, sheets). En dashboards nativos iOS/iPadOS/macOS o empaquetados con Tauri/Electron aplican también las convenciones de plataforma.
 *   **8.5. Mínimos No Negociables** (resumen del skill; ante cualquier discrepancia prevalecen el skill y la página HIG citada):
@@ -19185,6 +19189,15 @@ def language_for(path: Path) -> str:
     return SUFFIX_LANG.get(path.suffix.lower(), "text")
 
 
+def submodule_paths(root: Path) -> set[str]:
+    """Rutas de submódulos declarados en .gitmodules: código externo, no se vuelca."""
+    gm = root / ".gitmodules"
+    if not gm.is_file():
+        return set()
+    txt = gm.read_text(encoding="utf-8", errors="ignore")
+    return {m.strip().strip("/") for m in re.findall(r"^\s*path\s*=\s*(.+)$", txt, re.MULTILINE)}
+
+
 def collect(
     root: Path, output: Path
 ) -> tuple[list[tuple[str, str]], list[str], list[str], list[str]]:
@@ -19194,12 +19207,18 @@ def collect(
     skipped_generated: list[str] = []
     skipped_other: list[str] = []
     output_resolved = output.resolve()
+    submodules = submodule_paths(root)
 
     for dirpath, dirnames, filenames in os.walk(root):
         current = Path(dirpath)
         kept: list[str] = []
         for dirname in sorted(dirnames):
-            if dirname in EXCLUDE_DIRS or (current == root and dirname in ROOT_EXCLUDE_DIRS):
+            rel_dir = (current / dirname).relative_to(root).as_posix()
+            if (
+                dirname in EXCLUDE_DIRS
+                or (current == root and dirname in ROOT_EXCLUDE_DIRS)
+                or rel_dir in submodules
+            ):
                 skipped_dirs.append((current / dirname).relative_to(root).as_posix())
                 continue
             kept.append(dirname)
@@ -20593,7 +20612,17 @@ Opción A, con el CLI de skills (Claude Code, Cursor, Codex y otros agentes):
 npx skills add dickwu/apple-design-skill -a claude-code
 ```
 
-Opción B, como submódulo fijado (sirve para cualquier agente que lea `AGENTS.md` o archivos de reglas):
+Opción B, como submódulo fijado. Es la variante que usa este repo, en `.claude/skills/apple-design`, donde Claude Code detecta el skill sin configuración:
+
+```bash
+git submodule add https://github.com/dickwu/apple-design-skill.git .claude/skills/apple-design
+git -C .claude/skills/apple-design checkout 39ea3fbab3011e0798c076dbeabf4917001499da
+git add .gitmodules .claude/skills/apple-design
+```
+
+Al clonar un repo con el submódulo: `git clone --recurse-submodules …` o, en un clon existente, `git submodule update --init`.
+
+Opción C, submódulo en `.design-rules/`, para agentes que leen `AGENTS.md` o archivos de reglas:
 
 ```bash
 git submodule add https://github.com/dickwu/apple-design-skill.git .design-rules
@@ -20684,6 +20713,16 @@ Después del scaffold:
 5. Regenerar `contexto_proyecto.md` (`python scripts/generate-contexto.py`) en el mismo cambio que toque código, configuración o documentación normativa (§5.10).
 6. Conectar Graft si el bootstrap no lo hizo: `graft init --agents claude --no-global` y versionar el wiring (§9, [Graft](Graft.md)).
 7. Si el proyecto tiene interfaz web: al cerrar el desarrollo inicial (primera versión usable de punta a punta, antes del primer release), correr `/fix` para medir y corregir los caminos lentos. Adjuntar el reporte, con los números de antes y después, al PR o al release (§3.4).
+
+## Clonar este repositorio
+
+```bash
+git clone --recurse-submodules https://github.com/luciomerlo/dev-standards.git
+# en un clon existente:
+git submodule update --init
+```
+
+El submódulo `.claude/skills/apple-design` es el skill de revisión de dashboards (§8). Sin inicializarlo, el resto del repo funciona igual.
 
 ## Adoptar en un repo que ya existe
 
@@ -20810,6 +20849,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | `scripts/transcribe_via_groq.py` | Cliente del backend `cloud-api` para Whisper (Groq) (§7.2) |
 | `scripts/run_on_modal.py` | Cliente del backend `modal` (Modal, ~$30 USD/mes gratis) (§7.2) |
 | `config.yaml` | SSoT de configuración de dominio (§1.1) |
+| `.claude/skills/apple-design` | Submódulo fijado de `apple-design-skill`, el skill de revisión de dashboards (§8) |
 | `wiki/` | Esta Wiki, versionada con el código (§5.9) |
 | `contexto_proyecto.md` | Resumen de arquitectura y contenido completo del código y la configuración (§5.10) |
 

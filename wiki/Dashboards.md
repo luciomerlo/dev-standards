@@ -16,7 +16,17 @@ Opción A, con el CLI de skills (Claude Code, Cursor, Codex y otros agentes):
 npx skills add dickwu/apple-design-skill -a claude-code
 ```
 
-Opción B, como submódulo fijado (sirve para cualquier agente que lea `AGENTS.md` o archivos de reglas):
+Opción B, como submódulo fijado. Es la variante que usa este repo, en `.claude/skills/apple-design`, donde Claude Code detecta el skill sin configuración:
+
+```bash
+git submodule add https://github.com/dickwu/apple-design-skill.git .claude/skills/apple-design
+git -C .claude/skills/apple-design checkout 39ea3fbab3011e0798c076dbeabf4917001499da
+git add .gitmodules .claude/skills/apple-design
+```
+
+Al clonar un repo con el submódulo: `git clone --recurse-submodules …` o, en un clon existente, `git submodule update --init`.
+
+Opción C, submódulo en `.design-rules/`, para agentes que leen `AGENTS.md` o archivos de reglas:
 
 ```bash
 git submodule add https://github.com/dickwu/apple-design-skill.git .design-rules

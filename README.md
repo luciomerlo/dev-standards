@@ -37,6 +37,7 @@ graph TD
 | `scripts/run_on_modal.py` | Cliente del backend `modal` ([Modal](https://modal.com), ~$30 USD/mes gratis) |
 | `scripts/transcribe_via_groq.py` | Cliente del backend `cloud-api` para proyectos basados en Whisper (Groq) |
 | `scripts/run_on_hf_inference.py` | Cliente del backend `cloud-api` para otros modelos hospedados en HF |
+| `.claude/skills/apple-design` | Submódulo fijado de [`apple-design-skill`](https://github.com/dickwu/apple-design-skill), el estándar de dashboards (§8). Clonar con `--recurse-submodules` |
 | [`wiki/`](wiki/Home.md) | Wiki operativa de este propio repo (onboarding, arquitectura, runbook) |
 
 ## Uso rápido

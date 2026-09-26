@@ -31,6 +31,16 @@ Después del scaffold:
 6. Conectar Graft si el bootstrap no lo hizo: `graft init --agents claude --no-global` y versionar el wiring (§9, [Graft](Graft.md)).
 7. Si el proyecto tiene interfaz web: al cerrar el desarrollo inicial (primera versión usable de punta a punta, antes del primer release), correr `/fix` para medir y corregir los caminos lentos. Adjuntar el reporte, con los números de antes y después, al PR o al release (§3.4).
 
+## Clonar este repositorio
+
+```bash
+git clone --recurse-submodules https://github.com/luciomerlo/dev-standards.git
+# en un clon existente:
+git submodule update --init
+```
+
+El submódulo `.claude/skills/apple-design` es el skill de revisión de dashboards (§8). Sin inicializarlo, el resto del repo funciona igual.
+
 ## Adoptar en un repo que ya existe
 
 No hace falta re-bootstrap si el árbol ya tiene manifiesto, CI y README. Falta lo que el auditor marque en rojo:

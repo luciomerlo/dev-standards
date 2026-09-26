@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- This repository adopts RULES.md §8: `dickwu/apple-design-skill` added as a git submodule at
+  `.claude/skills/apple-design`, pinned to `39ea3fb`, so Claude Code exposes `/apple-design`.
+  `generate-contexto.py` now skips every path listed in `.gitmodules`.
 - RULES.md §9 (Graft): every source repository is wired to [`trailhq/Graft`](https://github.com/trailhq/Graft)
   (`@nanonets/graft@0.19.0`) with `graft init --agents claude --no-global`; the wiring (`.claude/`,
   `.mcp.json`, `.ignore`) is committed, `graft/` stays a git-ignored cache, `--deep` is opt-in, telemetry

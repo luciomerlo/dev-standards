@@ -22,6 +22,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | `scripts/transcribe_via_groq.py` | Cliente del backend `cloud-api` para Whisper (Groq) (§7.2) |
 | `scripts/run_on_modal.py` | Cliente del backend `modal` (Modal, ~$30 USD/mes gratis) (§7.2) |
 | `config.yaml` | SSoT de configuración de dominio (§1.1) |
+| `.claude/skills/apple-design` | Submódulo fijado de `apple-design-skill`, el skill de revisión de dashboards (§8) |
 | `wiki/` | Esta Wiki, versionada con el código (§5.9) |
 | `contexto_proyecto.md` | Resumen de arquitectura y contenido completo del código y la configuración (§5.10) |
 
