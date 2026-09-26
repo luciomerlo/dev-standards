@@ -550,8 +550,8 @@ def render_tree(rels: list[str]) -> str:
 
     def walk(node: Tree, prefix: str) -> None:
         entries: list[tuple[str, Tree | None]] = []
-        for name, child in sorted(node.dirs.items()):
-            entries.append((name, child))
+        for name, sub in sorted(node.dirs.items()):
+            entries.append((name, sub))
         for name in sorted(node.files):
             entries.append((name, None))
         for index, (name, child) in enumerate(entries):

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- CI "Lint & Type Check" green: `ruff check`, `ruff format --check` and `mypy` pass on `scripts/`.
+  Ruff config moved to `[tool.ruff.lint]`; `T201` (print) ignored for `scripts/*`, which are CLIs.
+  Line-length, naming and typing fixes only, no behavior change.
+
 ### Added
 - RULES.md §5.11: repositories that use dev-standards as a knowledge base carry an `AGENTS.md` (plus
   `CLAUDE.md` importing it) that declares dev-standards and lists the external standards to apply

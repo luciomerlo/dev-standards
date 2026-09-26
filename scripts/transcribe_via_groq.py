@@ -27,7 +27,6 @@ import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
-from typing import Optional
 
 GROQ_TRANSCRIPTIONS_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
 DEFAULT_MODEL = "whisper-large-v3-turbo"
@@ -42,12 +41,14 @@ def _multipart_body(fields: dict, file_field: str, file_path: Path) -> tuple:
     parts = []
     for name, value in fields.items():
         parts.append(
-            f"--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n".encode()
+            (
+                f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'
+            ).encode()
         )
     content_type = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
     parts.append(
-        f"--{boundary}\r\nContent-Disposition: form-data; name=\"{file_field}\"; "
-        f"filename=\"{file_path.name}\"\r\nContent-Type: {content_type}\r\n\r\n".encode()
+        f'--{boundary}\r\nContent-Disposition: form-data; name="{file_field}"; '
+        f'filename="{file_path.name}"\r\nContent-Type: {content_type}\r\n\r\n'.encode()
     )
     parts.append(file_path.read_bytes())
     parts.append(f"\r\n--{boundary}--\r\n".encode())
@@ -60,13 +61,14 @@ def _call_groq(
     *,
     model: str,
     response_format: str,
-    language: Optional[str],
-    api_key: Optional[str],
-):
+    language: str | None,
+    api_key: str | None,
+) -> str:
     api_key = api_key or os.environ.get("GROQ_API_KEY")
     if not api_key:
         raise GroqTranscriptionError(
-            "Falta GROQ_API_KEY en el entorno. Configuralo en .env antes de usar --compute cloud-api."
+            "Falta GROQ_API_KEY en el entorno. "
+            "Configuralo en .env antes de usar --compute cloud-api."
         )
 
     path = Path(audio_path)
@@ -86,7 +88,8 @@ def _call_groq(
     )
     try:
         with urllib.request.urlopen(req, timeout=300) as resp:
-            return resp.read().decode("utf-8")
+            text: str = resp.read().decode("utf-8")
+            return text
     except urllib.error.HTTPError as e:
         raise GroqTranscriptionError(
             f"Groq API error {e.code}: {e.read().decode('utf-8', errors='ignore')}"
@@ -99,30 +102,37 @@ def transcribe(
     audio_path: str,
     *,
     model: str = DEFAULT_MODEL,
-    language: Optional[str] = None,
-    api_key: Optional[str] = None,
+    language: str | None = None,
+    api_key: str | None = None,
 ) -> str:
     """Transcribe `audio_path` vía la API de Groq. Devuelve el texto plano."""
-    return _call_groq(audio_path, model=model, response_format="text", language=language, api_key=api_key)
+    return _call_groq(
+        audio_path, model=model, response_format="text", language=language, api_key=api_key
+    )
 
 
 def transcribe_verbose(
     audio_path: str,
     *,
     model: str = DEFAULT_MODEL,
-    language: Optional[str] = None,
-    api_key: Optional[str] = None,
+    language: str | None = None,
+    api_key: str | None = None,
 ) -> dict:
     """Transcribe con `response_format=verbose_json`: devuelve un dict con
     `segments` (cada uno con `start`/`end`/`text`, igual forma que la API de
     OpenAI/faster-whisper), para pipelines que necesitan timestamps
     (ej. chunking por segmento) en vez de solo el texto plano."""
-    raw = _call_groq(audio_path, model=model, response_format="verbose_json", language=language, api_key=api_key)
-    return json.loads(raw)
+    raw = _call_groq(
+        audio_path, model=model, response_format="verbose_json", language=language, api_key=api_key
+    )
+    parsed: dict = json.loads(raw)
+    return parsed
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("audio_path")
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--language", default=None)

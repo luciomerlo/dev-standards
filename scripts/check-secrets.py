@@ -14,6 +14,7 @@ import argparse
 import re
 import subprocess
 import sys
+from collections.abc import Iterator
 
 PATTERNS = {
     "Groq API key": r"gsk_[A-Za-z0-9]{20,}",
@@ -23,7 +24,9 @@ PATTERNS = {
     "GitHub token": r"(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}",
     "Slack token": r"xox[baprs]-[A-Za-z0-9-]{10,}",
     "Private key block": r"-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----",
-    "Hardcoded secret assignment": r'(api[_-]?key|secret|token|password)["\']?\s*[:=]\s*["\']([A-Za-z0-9_\-]{16,})["\']',
+    "Hardcoded secret assignment": (
+        r'(api[_-]?key|secret|token|password)["\']?\s*[:=]\s*["\']([A-Za-z0-9_\-]{16,})["\']'
+    ),
 }
 # Valores que parecen nombres de variable de entorno (ANTHROPIC_API_KEY), no secretos reales.
 _ENV_VAR_LOOKALIKE = re.compile(r"^[A-Z][A-Z0-9_]{15,}$")
@@ -31,11 +34,13 @@ ALLOWLIST_MARKER = "allowlist-secret"
 SKIP_FILES = (".env.example", "check-secrets.py")
 
 
-def iter_lines(mode: str):
+def iter_lines(mode: str) -> Iterator[tuple[str, str]]:
     if mode == "staged":
         diff = subprocess.run(
             ["git", "diff", "--cached", "-U0", "--no-color"],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         ).stdout
         path = None
         for line in diff.splitlines():
@@ -45,13 +50,16 @@ def iter_lines(mode: str):
                 yield path, line[1:]
     elif mode == "tree":
         files = subprocess.run(
-            ["git", "ls-files"], capture_output=True, text=True, check=False,
+            ["git", "ls-files"],
+            capture_output=True,
+            text=True,
+            check=False,
         ).stdout.splitlines()
         for path in files:
             if any(skip in path for skip in SKIP_FILES):
                 continue
             try:
-                with open(path, "r", encoding="utf-8", errors="ignore") as fh:
+                with open(path, encoding="utf-8", errors="ignore") as fh:
                     for line in fh:
                         yield path, line
             except (OSError, IsADirectoryError):
@@ -59,7 +67,9 @@ def iter_lines(mode: str):
     elif mode == "history":
         log = subprocess.run(
             ["git", "log", "--all", "-p", "--no-color"],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         ).stdout
         path = None
         for line in log.splitlines():
