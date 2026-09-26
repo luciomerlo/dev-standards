@@ -792,27 +792,6 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.repository }}:latest
-
-  semantic-release:
-    name: Semantic Release
-    runs-on: ubuntu-latest
-    needs: [lint-and-typecheck]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm install -g semantic-release @semantic-release/changelog @semantic-release/git @semantic-release/github conventional-changelog-conventionalcommits
-      - env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: semantic-release --branches main
 ```
 
 ## Ruta: `.gitignore`
@@ -15950,6 +15929,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- CI: removed the `semantic-release` job. It failed on every push to `main` (`ENOPKG`: its default npm
+  plugin needs a `package.json`, which this Python repo does not have). Versioning stays manual.
 - CI "Lint & Type Check" green: `ruff check`, `ruff format --check` and `mypy` pass on `scripts/`.
   Ruff config moved to `[tool.ruff.lint]`; `T201` (print) ignored for `scripts/*`, which are CLIs.
   Line-length, naming and typing fixes only, no behavior change.
@@ -21198,7 +21179,7 @@ adopción y qué backend le toca a cada tier.
 
 ## CI
 
-`.github/workflows/ci.yml` corre lint/typecheck, tests con coverage, build de imagen y semantic-release en `main`. El job de auditoría periódica (schedule mensual, §5.7) es el que debe invocar `audit-standards.py` y abrir issue si hay regresiones.
+`.github/workflows/ci.yml` corre el escaneo de secretos y lint/typecheck en cada push y PR, y el build de la imagen Docker en `main`. No hay releases automáticas: la versión y el `CHANGELOG.md` se actualizan a mano (§5.1–5.2). El job de auditoría periódica (schedule mensual, §5.7) es el que debe invocar `audit-standards.py` y abrir issue si hay regresiones.
 
 ## Entorno de este repo
 

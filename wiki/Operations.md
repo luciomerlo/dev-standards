@@ -58,7 +58,7 @@ adopción y qué backend le toca a cada tier.
 
 ## CI
 
-`.github/workflows/ci.yml` corre lint/typecheck, tests con coverage, build de imagen y semantic-release en `main`. El job de auditoría periódica (schedule mensual, §5.7) es el que debe invocar `audit-standards.py` y abrir issue si hay regresiones.
+`.github/workflows/ci.yml` corre el escaneo de secretos y lint/typecheck en cada push y PR, y el build de la imagen Docker en `main`. No hay releases automáticas: la versión y el `CHANGELOG.md` se actualizan a mano (§5.1–5.2). El job de auditoría periódica (schedule mensual, §5.7) es el que debe invocar `audit-standards.py` y abrir issue si hay regresiones.
 
 ## Entorno de este repo
 
