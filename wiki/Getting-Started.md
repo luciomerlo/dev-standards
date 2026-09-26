@@ -17,9 +17,9 @@ bash /ruta/a/dev-standards/scripts/bootstrap-project.sh \
   --desc "Descripción breve"
 ```
 
-`--lang` acepta `python`, `node`, `go` o `rust`. Sin `--name` usa el basename del directorio.
+`--lang` acepta `python`, `node`, `go` o `rust`. Sin `--name` usa el basename del directorio. `--dashboard` agrega `apple-design-skill` como submódulo fijado (§8.2).
 
-El script genera README, CHANGELOG, manifiesto con `0.1.0`, `.gitignore`, Dockerfile, CI, `.env.example`, `config.yaml`, `wiki/` con las cuatro páginas mínimas (§5.9) y `contexto_proyecto.md` (§5.10).
+El script genera README, CHANGELOG, manifiesto con `0.1.0`, `.gitignore`, Dockerfile, CI, `.env.example`, `config.yaml`, `wiki/` con las cuatro páginas mínimas (§5.9), `contexto_proyecto.md` (§5.10) y `AGENTS.md` + `CLAUDE.md` con los estándares externos que aplican (§5.11).
 
 Después del scaffold:
 
@@ -28,6 +28,18 @@ Después del scaffold:
 3. Poner la descripción del hosting en inglés, ≤350 caracteres, alineada al README (§5.8).
 4. Añadir código en `src/` y tests en `tests/`.
 5. Regenerar `contexto_proyecto.md` (`python scripts/generate-contexto.py`) en el mismo cambio que toque código, configuración o documentación normativa (§5.10).
+6. Conectar Graft si el bootstrap no lo hizo: `graft init --agents claude --no-global` y versionar el wiring (§9, [Graft](Graft.md)).
+7. Si el proyecto tiene interfaz web: al cerrar el desarrollo inicial (primera versión usable de punta a punta, antes del primer release), correr `/fix` para medir y corregir los caminos lentos. Adjuntar el reporte, con los números de antes y después, al PR o al release (§3.4).
+
+## Clonar este repositorio
+
+```bash
+git clone --recurse-submodules https://github.com/luciomerlo/dev-standards.git
+# en un clon existente:
+git submodule update --init
+```
+
+El submódulo `.claude/skills/apple-design` es el skill de revisión de dashboards (§8). Sin inicializarlo, el resto del repo funciona igual.
 
 ## Adoptar en un repo que ya existe
 
@@ -45,6 +57,10 @@ No hace falta re-bootstrap si el árbol ya tiene manifiesto, CI y README. Falta 
 6. Copiar `scripts/generate-contexto.py` y generar `contexto_proyecto.md`
    (`python scripts/generate-contexto.py`). Regenerarlo cada vez que cambie
    código, configuración o documentación normativa (§5.10).
+7. Instalar Graft (`npm install -g @nanonets/graft@0.19.0`), correr
+   `graft init --agents claude --no-global` y versionar `.claude/`, `.mcp.json`,
+   `.ignore` y `.gitignore` (§9).
+8. Crear `AGENTS.md` (y `CLAUDE.md` con `@AGENTS.md`) que declare dev-standards y liste los estándares externos que aplican. Si hay un dashboard, agregar `apple-design-skill` como submódulo en `.claude/skills/apple-design` (§5.11, §8.2, [Dashboards](Dashboards.md)).
 
 ## Añadir o cambiar un estándar
 

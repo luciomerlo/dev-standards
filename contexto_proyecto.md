@@ -8,10 +8,18 @@
   - Frameworks y plataforma: Docker, GitHub Actions, pre-commit, commitlint, config.yaml como fuente única de configuración.
   - Dependencias principales: pytest>=7.4, ruff>=0.1, mypy>=1.5, pre-commit>=3.3.
 
-- Árbol de directorios y archivos relevantes (42 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
+- Árbol de directorios y archivos relevantes (51 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
 
 ```text
 .
+├── .claude/
+│   ├── helpers/
+│   │   ├── graft-hooks.cjs
+│   │   └── graft-statusline.cjs
+│   ├── skills/
+│   │   └── graft/
+│   │       └── SKILL.md
+│   └── settings.json
 ├── .github/
 │   └── workflows/
 │       └── ci.yml
@@ -32,7 +40,9 @@
 ├── wiki/
 │   ├── Architecture.md
 │   ├── Compute.md
+│   ├── Dashboards.md
 │   ├── Getting-Started.md
+│   ├── Graft.md
 │   ├── Home.md
 │   ├── Operations.md
 │   └── _Sidebar.md
@@ -40,8 +50,11 @@
 ├── .editorconfig
 ├── .env.example
 ├── .gitignore
+├── .mcp.json
 ├── .pre-commit-config.yaml
+├── AGENTS.md
 ├── CHANGELOG.md
+├── CLAUDE.md
 ├── CONVERSACIONES.md
 ├── Dockerfile
 ├── GOODBYESERENA.md
@@ -61,9 +74,397 @@
 └── test.py
 ```
 
-- Fuera del volcado de contenido: carpetas `.git`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `LICENSE`.
+- Fuera del volcado de contenido: carpetas `.git`, `.ruff_cache`, `graft`, `.claude/skills/apple-design`, `scripts/__pycache__`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `.gitmodules`, `.ignore`, `LICENSE`.
 
 # ARCHIVOS DEL PROYECTO
+
+## Ruta: `.claude/helpers/graft-hooks.cjs`
+
+```javascript
+#!/usr/bin/env node
+const path = require('path');
+const fs = require('fs');
+const { pathToFileURL } = require('url');
+const { execFileSync } = require('child_process');
+const dir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+const BAKED = "/opt/node22/lib/node_modules/@nanonets/graft/dist/claude";
+
+// The dist/claude dir of @nanonets/graft resolved from a base whose node_modules is searched.
+function fromPkg(base) {
+  try {
+    const pkg = require.resolve('@nanonets/graft/package.json', { paths: [base] });
+    return path.join(path.dirname(pkg), 'dist', 'claude');
+  } catch { return null; }
+}
+
+// The global node_modules dir per npm (handles Homebrew/Windows/volta). Queried on demand.
+function globalRoot() {
+  try {
+    const root = execFileSync('npm', ['root', '-g'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], shell: process.platform === 'win32' }).trim();
+    return root || null;
+  } catch { return null; /* npm unavailable */ }
+}
+
+// The version of the package a dist/claude dir belongs to, or null if unreadable.
+function versionOf(distClaude) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(distClaude, '..', '..', 'package.json'), 'utf8')).version || null;
+  } catch { return null; }
+}
+
+// Numeric-dotted compare of the release part; an unreadable version loses to any known one.
+function newer(a, b) {
+  if (!a) return false;
+  if (!b) return true;
+  const p = (v) => String(v).split('-')[0].split('.').map((n) => Number(n) || 0);
+  const pa = p(a), pb = p(b);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d > 0;
+  }
+  return false;
+}
+
+// The highest-versioned dir in `dirs` that actually contains `name`, or null.
+function best(dirs, name) {
+  let bestDir = null, bestVer = null;
+  for (const d of dirs) {
+    if (!d || !fs.existsSync(path.join(d, name))) continue;
+    const v = versionOf(d);
+    if (bestDir === null || newer(v, bestVer)) { bestDir = d; bestVer = v; }
+  }
+  return bestDir;
+}
+
+function entry(name) {
+  // Cheap candidates first, and only shell out to npm when every one of them misses.
+  const cheap = [BAKED, fromPkg(dir), fromPkg(path.join(path.dirname(process.execPath), '..', 'lib'))];
+  const hit = best(cheap, name);
+  if (hit) return path.join(hit, name);
+  const gr = globalRoot();
+  const global = gr && path.join(gr, '@nanonets', 'graft', 'dist', 'claude');
+  if (global && fs.existsSync(path.join(global, name))) return path.join(global, name);
+  return path.join(dir, 'dist', 'claude', name); // last-ditch; import will no-op if absent
+}
+
+import(pathToFileURL(entry("hooks.js")).href).then((m) => m.main(process.argv[2])).catch(() => { /* graft unavailable — no-op */ });
+```
+
+## Ruta: `.claude/helpers/graft-statusline.cjs`
+
+```javascript
+#!/usr/bin/env node
+const path = require('path');
+const fs = require('fs');
+const { pathToFileURL } = require('url');
+const { execFileSync } = require('child_process');
+const dir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+const BAKED = "/opt/node22/lib/node_modules/@nanonets/graft/dist/claude";
+
+// The dist/claude dir of @nanonets/graft resolved from a base whose node_modules is searched.
+function fromPkg(base) {
+  try {
+    const pkg = require.resolve('@nanonets/graft/package.json', { paths: [base] });
+    return path.join(path.dirname(pkg), 'dist', 'claude');
+  } catch { return null; }
+}
+
+// The global node_modules dir per npm (handles Homebrew/Windows/volta). Queried on demand.
+function globalRoot() {
+  try {
+    const root = execFileSync('npm', ['root', '-g'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], shell: process.platform === 'win32' }).trim();
+    return root || null;
+  } catch { return null; /* npm unavailable */ }
+}
+
+// The version of the package a dist/claude dir belongs to, or null if unreadable.
+function versionOf(distClaude) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(distClaude, '..', '..', 'package.json'), 'utf8')).version || null;
+  } catch { return null; }
+}
+
+// Numeric-dotted compare of the release part; an unreadable version loses to any known one.
+function newer(a, b) {
+  if (!a) return false;
+  if (!b) return true;
+  const p = (v) => String(v).split('-')[0].split('.').map((n) => Number(n) || 0);
+  const pa = p(a), pb = p(b);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d > 0;
+  }
+  return false;
+}
+
+// The highest-versioned dir in `dirs` that actually contains `name`, or null.
+function best(dirs, name) {
+  let bestDir = null, bestVer = null;
+  for (const d of dirs) {
+    if (!d || !fs.existsSync(path.join(d, name))) continue;
+    const v = versionOf(d);
+    if (bestDir === null || newer(v, bestVer)) { bestDir = d; bestVer = v; }
+  }
+  return bestDir;
+}
+
+function entry(name) {
+  // Cheap candidates first, and only shell out to npm when every one of them misses.
+  const cheap = [BAKED, fromPkg(dir), fromPkg(path.join(path.dirname(process.execPath), '..', 'lib'))];
+  const hit = best(cheap, name);
+  if (hit) return path.join(hit, name);
+  const gr = globalRoot();
+  const global = gr && path.join(gr, '@nanonets', 'graft', 'dist', 'claude');
+  if (global && fs.existsSync(path.join(global, name))) return path.join(global, name);
+  return path.join(dir, 'dist', 'claude', name); // last-ditch; import will no-op if absent
+}
+
+import(pathToFileURL(entry("statusline.js")).href).then((m) => m.main()).catch(() => { /* graft unavailable — no-op */ });
+```
+
+## Ruta: `.claude/settings.json`
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-statusline.cjs\""
+  },
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-statusline.cjs\""
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-hooks.cjs\" post-edit",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|mcp__graft__|Read|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-hooks.cjs\" tool-savings",
+            "timeout": 8000
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-hooks.cjs\" prompt",
+            "timeout": 15000
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-hooks.cjs\" session-start",
+            "timeout": 8000
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-hooks.cjs\" stop",
+            "timeout": 8000
+          }
+        ]
+      }
+    ]
+  },
+  "footerLinksRegexes": [
+    "graft/[\\w./-]+\\.md"
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(graft:*)",
+      "Bash(npx graft:*)",
+      "Bash(graft-dev:*)",
+      "Bash(node dist/cli.js:*)"
+    ]
+  }
+}
+```
+
+## Ruta: `.claude/skills/graft/SKILL.md`
+
+```markdown
+---
+name: graft
+description: This repo is indexed by graft/. For ANY task here, whether
+  understanding how something works, finding where code lives, tracing what
+  calls a symbol or what a change breaks, or scoping an edit, get your context
+  from graft before grepping or reading source files.
+---
+
+# graft
+
+`graft/` holds a graph of this repo: small markdown nodes that each explain one
+part in prose and name the exact `file:line` spans they cover, plus a wiring
+graph of who-calls-what. Querying a node costs a few hundred tokens; rebuilding
+that understanding by reading source costs thousands, and misses the edges.
+
+Every command below is `$0`, needs no API key, and returns in under a second.
+There are six of them. **Pick the one that fits the task, run it, act on the
+answer; don't chain tools hoping for more. Most tasks need one call.**
+
+## The tools
+
+### 1 · `graft ask "<question>" --source`: locate + understand (the default)
+Ranked retrieval over the graph, routed automatically between prose nodes and
+the wiring graph, returning the top hits with exact `file:line`.
+- `--source` inlines the code at each hit, the ≤8-line **crux** of each
+  definition, so the result IS the code you need, no follow-up file read. Add
+  `--full` only when the crux is too small to act on.
+- `--in <path>` narrows to a subtree before ranking; `-n N` caps results (default 8).
+- **Use it when** the question is conceptual or locational: "how does auth
+  work", "where is rate-limiting handled", "what assembles the request pipeline".
+- One ask usually answers. A genuinely multi-part question needs one ask per
+  distinct sub-aspect, never the same question reworded. Few or weak hits mean
+  switch tool (grep / skeleton / callers), don't re-ask.
+
+### 2 · `graft grep "<pattern>"`: exhaustive find
+Regex (or `--fixed` for a literal) over every indexed file, hits **grouped by
+enclosing symbol** and ranked by coupling; it also reports files it couldn't read.
+- **Use it when** you need every occurrence: all call sites, all uses of a
+  constant, all providers. `ask` is ranked top-N and *will* miss instances;
+  grep won't. One grep replaces a spray of asks.
+- Search a **short symbol name or literal**, not a full guessed signature: an
+  over-specific regex (`func (s *Server) GenerateHandler`) returns nothing even
+  when the code is indexed. If a grep misses, **loosen it** (drop the receiver
+  and signature, keep the bare name) and retry `graft grep` — do NOT switch to
+  raw `grep -rn`, which is slower and unranked.
+- `-i` case-insensitive; `--in <path>` scopes to a subtree. Raw `grep -rn` is
+  only for files graft genuinely doesn't index (docs, configs, brand-new files).
+
+### 3 · `graft skeleton <file>`: a file's API at a glance
+Signatures-only view of one file (every function / method / type with its span)
+in ~200 tokens, ~10x cheaper than reading the file.
+- **Use it when** you need "what's in this file / what can I call here" before
+  editing or wiring into it. One skeleton is the whole answer for a file; don't
+  re-skeleton the same file, and don't skeleton every file `map` already named.
+
+### 4 · `graft callers <symbol>`: the exact edges
+Precomputed call/reference edges, not a text search. Symbol can be bare
+(`Foo`), qualified (`Class.method`), or package-qualified (`pkg.Fn`).
+- default `--direction in`: **who calls/references** this; run before you
+  rename, delete, or change its signature.
+- `--direction out`: **what this symbol itself calls/depends on** (the old `callees`).
+- `--depth N`: walk transitively N hops for the **full blast radius** (the old
+  `impact`); `--depth 2` is the usual "what breaks if I touch this".
+- `--depth all`: the **entire connected closure** — every source reachable
+  through the edges. Reach for this before a **refactor, rename, or any
+  multi-file change**: it surfaces the sibling and downstream files (platform
+  variants, a module you must split out) that a single-file edit would miss.
+
+### 5 · `graft map`: orientation for an unfamiliar repo or area
+A token-budgeted tour: directory clusters, per-directory hubs, and global
+hotspots, straight from the wiring graph.
+- **Use it when** you land in a repo cold or are asked for "the architecture".
+  `map` alone is the answer: read the hub cards it names; do NOT then skeleton
+  or ask your way through every subsystem it lists. `--max-dirs N` widens it.
+
+### 6 · Lifecycle: `graft build` / `graft check`
+Every tool above refreshes the graph itself before answering, so what those tools
+return always describes the code as it is right now — including edits you just made
+and have not committed. You do **not** need to run `build` after editing.
+
+One caveat, if you `grep` the markdown under `graft/` directly: those cards are a
+projection, rebuilt at the end of the turn rather than on each query, so after an edit
+they can lag. The tools above never do — prefer them, and treat a card's spans as
+stale if you have edited that file this turn.
+
+`build` is for the LLM layer (`--deep` adds a concept map; skip unless asked);
+`check` fails when `graft/` is stale, for CI.
+
+## Scenarios: the shortest path through a coding task
+
+| When you're… | Reach for | Calls |
+|---|---|---|
+| Onboarding / "explain this codebase" | `graft map`, then read the named hub cards | 1 |
+| Understanding a flow ("how does X work") | `graft ask "<flow>" --source` | 1 |
+| Finding where a change belongs | `graft ask "where is <behavior>" --source` | 1 |
+| Editing a symbol you can already name | `graft grep "<symbol>"`, edit at the `file:line` (skip `ask` — you know where it is) | 1 |
+| Renaming / deleting / changing a signature | `graft callers <sym> --depth 2` first | 1 |
+| Refactor / multi-file change (before editing) | `graft callers <sym> --depth all` — map every connected file, don't stop at the first | 1 |
+| "What does this depend on?" | `graft callers <sym> --direction out` | 1 |
+| Finding every occurrence of a pattern | `graft grep "<literal>"` | 1 |
+| "What's the API of this file?" | `graft skeleton <file>` | 1 |
+| Debugging a failure in area X | `graft ask "<symptom>" --source`, then `callers` on the suspect | 1–2 |
+| Judging a diff's risk before merge | `graft callers <changed sym> --depth 2` | 1 / symbol |
+| Working inside one repo of a monorepo | add `--in <scope>/` to ask / grep / callers | n/a |
+
+In a multi-repo workspace, graft ranks fairly so the biggest repo can't drown
+the rest, and every hit carries a `[scope/]` label naming its sub-project; when
+you already know where you're working, narrow with `graft ask "<task>" --in <scope>/`.
+
+## Spend the fewest calls
+- A node's `covers:` list already gives exact `file:line` for every symbol, so
+  cite straight from it. The spans are generated from source and authoritative;
+  don't re-open or re-grep files to "double-check".
+- When the task already names the file or symbol to change, go straight there:
+  `graft grep "<symbol>"` for the exact `file:line`, then edit. Reserve
+  `graft ask` for when you don't yet know where the code lives — an `ask`
+  round-trip is wasted on a target you can already name.
+- Trust the answer and act. Reach for a second tool only when the first genuinely
+  fell short: weak hits, a truncated span, or a need to be exhaustive.
+- If graft names a path that isn't on disk, its index is ahead of your checkout
+  (a branch switch or unpulled move). Don't read the missing file — `graft grep`
+  the symbol to find where it lives now, or run `graft build` to refresh.
+
+## Report what graft saved, every turn
+Each retrieval tool **opens** its output with a `[graft] tokens saved ≈ N` line:
+the estimated tokens that call saved versus reading the files it covers whole.
+Whenever you used any graft tool in a turn, close your reply with a one-line
+tally summing those numbers across every graft call you made, e.g.
+`🌱 graft saved ~12,400 tokens this turn (3 calls)`. A call with no such line
+(tiny files, where the pointers cost as much as the source) saved nothing, so
+skip it. This is the per-turn figure; the statusline carries the running
+session total.
+
+Once a turn has been billed, each line also states what that call was worth in
+dollars, at the rate this session is actually paying for input tokens — include
+that total alongside the tokens, e.g. `🌱 graft saved ~12,400 tokens (~$0.04)
+this turn`. When a line carries no dollar figure, report tokens alone rather
+than pricing them yourself.
+
+**Never pipe a graft command through `head`, `tail`, or `sed -n`.** Every tool
+is already capped and states what it dropped; clipping it costs you hits you
+asked for, and it silently drops the savings line the statusline's running
+total is parsed from.
+
+## When graft isn't enough
+- Span truncated ("+N more lines"): open the file at that exact range.
+- A node lacks a detail: ask a more specific question; only then read source at
+  the exact `file:line`, never a whole file to rebuild understanding graft gives.
+- You may also grep / ls / cat inside `graft/` directly (plain markdown;
+  `graft/INDEX.md` indexes the nodes), but the tools above are faster and
+  exhaustive where it matters, so reach for them first.
+
+When the graft MCP server is connected, these are exposed as tools too:
+`graft_find_code`, `graft_find_all`, `graft_file_api`, `graft_trace_calls` (with
+`direction` / `depth`), `graft_repo_map`, `graft_check_freshness`. Use whichever surface is
+available; the guidance is identical.
+```
 
 ## Ruta: `.continueignore`
 
@@ -476,6 +877,24 @@ data/
 .continue/
 .omc/
 __pycache__/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+```
+
+## Ruta: `.mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "graft": {
+      "command": "graft",
+      "args": [
+        "mcp"
+      ]
+    }
+  }
+}
 ```
 
 ## Ruta: `.pre-commit-config.yaml`
@@ -490,6 +909,29 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+```
+
+## Ruta: `AGENTS.md`
+
+```markdown
+# AGENTS.md — dev-standards
+
+Este repositorio es la base de conocimiento de ingeniería del ecosistema. La fuente de verdad es [RULES.md](RULES.md). Todo repositorio que lo use como base aplica las reglas de RULES.md y, además, los **estándares externos** de esta tabla, en las versiones fijadas.
+
+## Estándares externos a aplicar en repos consumidores
+
+| Estándar | Regla | Aplica a | Versión fijada | Cómo se instala en el repo consumidor |
+|----------|-------|----------|----------------|---------------------------------------|
+| [`dickwu/apple-design-skill`](https://github.com/dickwu/apple-design-skill) | §8 | Repos con dashboard, panel o vista de datos | commit `39ea3fbab3011e0798c076dbeabf4917001499da` | `git submodule add https://github.com/dickwu/apple-design-skill.git .claude/skills/apple-design` y luego `git -C .claude/skills/apple-design checkout 39ea3fb…`; o `bootstrap-project.sh --dashboard` |
+| [`trailhq/Graft`](https://github.com/trailhq/Graft) (`@nanonets/graft`) | §9 | Todo repo con código fuente | `0.19.0` | `npm install -g @nanonets/graft@0.19.0 && graft init --agents claude --no-global` |
+| Skill `/fix` | §3.4 | Repos con interfaz web | — | Se corre al cerrar el desarrollo inicial, antes del primer release |
+
+Cambiar una versión fijada es un cambio explícito en este repo: actualizar esta tabla, la regla correspondiente de RULES.md, las constantes de `scripts/bootstrap-project.sh` (`APPLE_DESIGN_COMMIT`, `GRAFT_VERSION`) y el CHANGELOG, todo en el mismo cambio.
+
+## Qué hacer como agente
+
+- **Trabajando en un repo consumidor:** leer su `AGENTS.md` (§5.11) y aplicar los estándares de la tabla que correspondan. Si el repo tiene un dashboard y no tiene `.claude/skills/apple-design`, proponer instalarlo en el mismo cambio. Todo PR que toque un dashboard lleva la revisión de `/apple-design`, y sus hallazgos Critical bloquean el merge.
+- **Trabajando en dev-standards:** este repo aplica sus propios estándares. `apple-design-skill` está como submódulo en `.claude/skills/apple-design` (clonar con `--recurse-submodules`) y Graft está conectado (`graft ask` antes de leer código). Todo cambio de reglas actualiza `wiki/`, `CHANGELOG.md` y `contexto_proyecto.md` en el mismo commit.
 ```
 
 ## Ruta: `another_test.txt`
@@ -15508,6 +15950,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- RULES.md §5.11: repositories that use dev-standards as a knowledge base carry an `AGENTS.md` (plus
+  `CLAUDE.md` importing it) that declares dev-standards and lists the external standards to apply
+  (`apple-design-skill` §8, Graft §9, `/fix` §3.4). §8.2 now states that the apple-design obligation
+  propagates to every consuming repo with a dashboard. Root `AGENTS.md` holds the canonical list and
+  pinned versions. `bootstrap-project.sh` gains `--dashboard` (adds the pinned submodule) and writes
+  `AGENTS.md`/`CLAUDE.md`; `audit-standards.py` gains `check_agents_md()`.
+- This repository adopts RULES.md §8: `dickwu/apple-design-skill` added as a git submodule at
+  `.claude/skills/apple-design`, pinned to `39ea3fb`, so Claude Code exposes `/apple-design`.
+  `generate-contexto.py` now skips every path listed in `.gitmodules`.
+- RULES.md §9 (Graft): every source repository is wired to [`trailhq/Graft`](https://github.com/trailhq/Graft)
+  (`@nanonets/graft@0.19.0`) with `graft init --agents claude --no-global`; the wiring (`.claude/`,
+  `.mcp.json`, `.ignore`) is committed, `graft/` stays a git-ignored cache, `--deep` is opt-in, telemetry
+  is disabled. Audit check `check_graft()`, bootstrap step, `generate-contexto.py` skips root `graft/`,
+  new Wiki page `wiki/Graft.md`. This repository is wired.
+- RULES.md §3.4: repositories with a web UI run the `/fix` performance skill (measure first,
+  then hidden reloads, non-Latin-1 regex hot paths, typing re-render storms, costly `:has()`,
+  late layout shifts, repeated work) once initial development is done and before the first
+  release, and again on slowness symptoms; agents must suggest it. Bootstrap next-steps and
+  `wiki/Getting-Started.md` mention it.
+- RULES.md §8 (Estética de Dashboards): every dashboard is designed and reviewed with
+  [`dickwu/apple-design-skill`](https://github.com/dickwu/apple-design-skill) (Apple HIG), pinned to
+  commit `39ea3fb`, installed per project rather than vendored (Apple-owned text, no upstream license).
+  PRs touching a dashboard carry the skill's review; Critical findings block merge. Adds minimums for
+  contrast, sizes, color, light/dark, charts, anti-template craft, and design tokens in the SSoT.
+  New Wiki page `wiki/Dashboards.md`.
+- RULES.md §5.8 audit check: `scripts/audit-standards.py` reads the repository's GitHub
+  description via the REST API (`origin` remote; `GITHUB_TOKEN`/`GH_TOKEN` optional) and requires
+  it non-empty and at most 350 characters. `bootstrap-project.sh` rejects a longer `--desc` and
+  applies it with `gh repo edit --description` when `gh` is available.
 - RULES.md §5.10: every repository must keep an up-to-date `contexto_proyecto.md` at the
   root (architecture summary plus the full text of relevant source, config, and normative
   docs) so a later LLM can read the codebase without walking the tree. Reference generator:
@@ -15549,6 +16020,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Initial release scaffold
+```
+
+## Ruta: `CLAUDE.md`
+
+```markdown
+@AGENTS.md
 ```
 
 ## Ruta: `commitlint.config.js`
@@ -16855,7 +17332,8 @@ graph TD
 
 | Archivo / carpeta | Rol |
 |---|---|
-| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7) |
+| [`AGENTS.md`](AGENTS.md) | Instrucciones para agentes y **lista canónica de estándares externos** que aplican los repos consumidores: `apple-design-skill` (§8), Graft (§9), `/fix` (§3.4) |
+| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7), estética de dashboards con Apple HIG (§8), grafo de contexto Graft (§9) |
 | [`contexto_proyecto.md`](contexto_proyecto.md) | Base de código consolidada para un LLM posterior (§5.10). Regenerar con `scripts/generate-contexto.py` |
 | [`docs/code-standards.md`](docs/code-standards.md) | Nomenclatura, formato, testing, checklist de revisión |
 | [`docs/commit-conventions.md`](docs/commit-conventions.md) | Convenciones de commits |
@@ -16869,6 +17347,7 @@ graph TD
 | `scripts/run_on_modal.py` | Cliente del backend `modal` ([Modal](https://modal.com), ~$30 USD/mes gratis) |
 | `scripts/transcribe_via_groq.py` | Cliente del backend `cloud-api` para proyectos basados en Whisper (Groq) |
 | `scripts/run_on_hf_inference.py` | Cliente del backend `cloud-api` para otros modelos hospedados en HF |
+| `.claude/skills/apple-design` | Submódulo fijado de [`apple-design-skill`](https://github.com/dickwu/apple-design-skill), el estándar de dashboards (§8). Clonar con `--recurse-submodules` |
 | [`wiki/`](wiki/Home.md) | Wiki operativa de este propio repo (onboarding, arquitectura, runbook) |
 
 ## Uso rápido
@@ -16962,6 +17441,7 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
 *   **3.1. Procesamiento Cero en Disco (Zero Disk I/O):** Priorizar el procesamiento y la indexaci¾n de contenidos pesados (como parsers XML complejos o benchmarks P2P) directamente en memoria RAM o mediante flujos de *streaming*, evitando la escritura innecesaria de archivos temporales en disco.
 *   **3.2. AsincronÝa y Tareas No Bloqueantes:** Ejecutar tareas de inicializaci¾n pesadas (verificaci¾n de dependencias, impresiones de metadatos o diagn¾sticos) en hilos independientes o de manera asÝncrona para no bloquear el arranque de la aplicaci¾n.
 *   **3.3. Estrategias de CachÚ Multinivel:** Implementar sistemas de cachÚ hÝbridos combinando almacenamiento volßtil en memoria (LRU) con persistencia externa (Redis, IndexedDB) aplicando polÝticas estrictas de expiraci¾n por TTL para minimizar llamadas repetitivas y latencias.
+*   **3.4. Pasada de Rendimiento al Cerrar el Desarrollo Inicial (`/fix`):** Todo repositorio con interfaz web (app, dashboard, SPA, página servida) debe pasar por el skill `/fix` al terminar su desarrollo inicial, es decir, cuando existe una primera versión usable de punta a punta y antes de publicar su primer release (`1.0.0` o el primer despliegue a usuarios). También se repite ante síntomas de lentitud: carga lenta, congelamientos, lag al tipear, recargas espontáneas o saltos de layout. El agente que cierre el desarrollo inicial **debe sugerir** ejecutar `/fix`. El skill trabaja en este orden: (1) medir primero, con una línea base p75 sobre 2–3 tiempos que el usuario percibe (carga hasta que la página es usable, del tecleo al eco, del envío al render), agregando un script de benchmark si no existe; (2) buscar recargas ocultas (`location.reload`, asignaciones a `window.location`, refrescos duros del router, loops de reintento); (3) texto fuera de Latin-1 en hot paths con regex (resaltado, markdown, búsqueda, diff); (4) tormentas de re-render al tipear; (5) CSS costoso (`:has()` sobre `:root` o contenedores grandes); (6) layout shifts tardíos; (7) trabajo repetido en un mismo camino. Cada hallazgo se reporta con archivo, evidencia, fix y cambio medido (antes/después), y se corrige de a uno. Un cambio que no mueve los números se revierte. El reporte se adjunta al PR o release correspondiente. No aplica a repos sin interfaz web (CLI, librerías, scripts).
 
 ---
 
@@ -16980,11 +17460,12 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
 *   **5.3. Higiene de Repositorios y Artefactos:** Excluir explícitamente mediante `.gitignore` directorios de datos generados (`data/`, `build/`, directorios de descargas, cachés de lenguaje, entornos virtuales y archivos binarios pesados o manuales), desacoplando estrictamente el código fuente de los artefactos transitorios.
 *   **5.4. Sincronización de Dependencias y Entornos:** Versionar y fijar (*pin*) dependencias críticas de motores externos o binarios de terceros cuando se identifiquen regresiones. Especificar restricciones estrictas de versiones del entorno de ejecución (ej. campo `engines` en Node.js) alineadas con flujos de CI multiversión.
 *   **5.5. README Ilustrativo y Badges:** Cada `README.md` debe incluir: (a) badges de estado (CI, versión, licencia, cobertura), (b) al menos un diagrama de arquitectura o flujo (Mermaid renderizado como SVG/PNG), (c) capturas de pantalla o GIFs de la UI/CLI cuando aplique, y (d) sección "Estándares aplicados" con checklist visual.
-*   **5.6. Scaffolding Obligatorio:** Existe un script de arranque (`scripts/bootstrap-project.sh` o equivalente) que genera en cualquier repo nuevo: `README.md` plantilla, `CHANGELOG.md` (Keep a Changelog), `pyproject.toml`/`package.json` con `version = "0.1.0"`, `.gitignore`, `Dockerfile`, `.github/workflows/ci.yml`, `.env.example`, `config.yaml` (SSoT), el directorio `wiki/` con las páginas mínimas de §5.9, y `contexto_proyecto.md` generado con `scripts/generate-contexto.py` (§5.10). Su uso es obligatorio al crear un repositorio.
+*   **5.6. Scaffolding Obligatorio:** Existe un script de arranque (`scripts/bootstrap-project.sh` o equivalente) que genera en cualquier repo nuevo: `README.md` plantilla, `CHANGELOG.md` (Keep a Changelog), `pyproject.toml`/`package.json` con `version = "0.1.0"`, `.gitignore`, `Dockerfile`, `.github/workflows/ci.yml`, `.env.example`, `config.yaml` (SSoT), el directorio `wiki/` con las páginas mínimas de §5.9, y `contexto_proyecto.md` generado con `scripts/generate-contexto.py` (§5.10), `AGENTS.md` + `CLAUDE.md` (§5.11), el wiring de Graft (§9) y, con `--dashboard`, el submódulo de `apple-design-skill` (§8.2). Su uso es obligatorio al crear un repositorio.
 *   **5.7. Auditoría Periódica Automatizada:** Un job programado (GitHub Actions `schedule` mensual o cron externo) ejecuta `scripts/audit-standards.py` que valida: presencia de versión SemVer, CHANGELOG, README con imágenes, Wiki (`wiki/` con páginas mínimas rellenas), contexto consolidado (`contexto_proyecto.md`, §5.10), `.gitignore`, Dockerfile, CI, y cumplimiento de RULES.md §1‑4. Genera reporte en `AUDIT_REPORT.md` y abre issue si hay regresiones.
 *   **5.8. Descripción del Repositorio:** Todo repositorio debe tener una descripción (campo "description" del hosting, ej. GitHub), en inglés, de máximo 350 caracteres. Debe crearse al crear `README.md` y actualizarse cada vez que `README.md` cambie, manteniéndola alineada con el propósito vigente del proyecto.
 *   **5.9. Wiki del Repositorio:** Todo repositorio debe tener su propia Wiki, versionada en el directorio `wiki/` (Markdown compatible con GitHub Wiki). Debe crearse junto al `README.md` (bootstrap §5.6) y actualizarse en el **mismo cambio** que altere propósito, arquitectura, uso, operación o forma de contribuir. El `README.md` es la puerta de entrada; la Wiki es el conocimiento operativo vivo (onboarding, arquitectura, runbook, troubleshooting) y no puede quedar en plantillas vacías ni desactualizada respecto al código. Páginas mínimas obligatorias: `Home.md` (índice y propósito), `Architecture.md`, `Getting-Started.md`, `Operations.md`. El README debe enlazar a `wiki/Home.md`. Publicar esas páginas al Wiki tab de GitHub (`<repo>.wiki.git`) es opcional; `wiki/` en el árbol del repo es la fuente de verdad.
 *   **5.10. Contexto consolidado del proyecto (`contexto_proyecto.md`):** Tan pronto como sea posible debe existir, en la raíz, un único archivo `contexto_proyecto.md` optimizado para que un motor de LLM posterior entienda la base de código completa. En un repositorio nuevo se genera al cerrar el scaffolding (§5.6); en uno existente, en el primer cambio que toque el árbol. Se regenera en el **mismo cambio** que altere código, configuración o documentación normativa (`python scripts/generate-contexto.py`), de modo que se mantenga actualizado. La implementación de referencia es `scripts/generate-contexto.py`; el bootstrap la copia y la ejecuta. Estructura estricta: (1) `# RESUMEN Y ARQUITECTURA`, con el propósito general, el stack tecnológico (lenguajes, frameworks y dependencias principales) y un árbol de directorios y archivos relevantes, excluyendo carpetas de build, binarios y dependencias (`node_modules`, `bin`, `obj`, `.git`, `venv`, `.venv`, `dist`, `build`, `target`, `__pycache__` y equivalentes); (2) `# ARCHIVOS DEL PROYECTO`, y por cada archivo de código o configuración relevante un apartado `## Ruta:` con la ruta relativa (por ejemplo `camino/al/archivo.ext`) seguido de un bloque con el lenguaje y el **contenido completo**, sin omisiones. Los Markdown versionados que definen el sistema (README, CHANGELOG, reglas, `docs/`, `wiki/` y demás `.md` de producto) entran en ese volcado. No se incluye el propio `contexto_proyecto.md` ni salidas generadas de auditoría (`AUDIT_REPORT.md` y resúmenes CSV); esos artefactos pueden nombrarse en el árbol como excluidos.
+*   **5.11. Instrucciones para Agentes (`AGENTS.md`):** Todo repositorio que use dev-standards como base de conocimiento tiene en la raíz un `AGENTS.md` que lo declara y enlaza `RULES.md`, y lista los estándares externos que los agentes deben aplicar: `apple-design-skill` para dashboards (§8), Graft (§9) y `/fix` (§3.4). Incluye además un `CLAUDE.md` que lo importa (`@AGENTS.md`). El bootstrap (§5.6) genera ambos, y `audit-standards.py` verifica que `AGENTS.md` exista y referencie dev-standards. La lista canónica de estándares externos, con sus versiones fijadas, está en el `AGENTS.md` de este repositorio.
 
 ---
 
@@ -17011,6 +17492,37 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
     *   **Interfaces CLI:** flag `--compute {local,colab,cloud-api,cloud-serverless,modal}` (limitado al subconjunto que el proyecto soporte). Default: `local` si hay CUDA disponible; si no hay CUDA y no se especificó `--compute`, el programa debe informar la ausencia y listar las alternativas en vez de intentar correr en CPU silenciosamente sobre una carga pesada.
 *   **7.4. Modelos tipo Stable Diffusion (Difusión de Imágenes):** Estos quedan **fuera del alcance de `colab`/`cloud-api`/`cloud-serverless`/`modal` de este estándar** por decisión de producto, no técnica — se gestionan aparte. Un componente de difusión dentro de un proyecto no-Stable-Diffusion (ej. un pipeline de audio que use Riffusion) debe quedar detrás de un flag explícito de opt-in, no habilitado por default.
 *   **7.5. Implementación de Referencia:** `scripts/gpu_compute.py` en este repositorio provee `detect_cuda()`, `resolve_backend()` y `colab_badge()` como base reutilizable; `scripts/run_on_modal.py` provee `call_modal_function()` para el backend `modal`; cada proyecto adapta esta base a su propia carga de trabajo en vez de reimplementar la detección desde cero.
+
+---
+
+## 8. Estética de Dashboards (Apple HIG)
+
+*   **8.1. Estándar de Referencia:** Todo dashboard, panel de control o vista de datos de un proyecto (HTML/React, Streamlit, Tauri/Electron, apps móviles, Looker Studio, Grafana o equivalente) se diseña y revisa con el skill [`dickwu/apple-design-skill`](https://github.com/dickwu/apple-design-skill), fijado al commit `39ea3fbab3011e0798c076dbeabf4917001499da` (2026-09-22). El skill contiene 123 páginas de las Human Interface Guidelines de Apple, más un lente de diseño que detecta estética de plantilla. Actualizar el pin es un cambio explícito que se registra en el CHANGELOG.
+*   **8.2. Instalación (no se vendoriza):** El texto de las guías pertenece a Apple Inc. y el repositorio del skill no declara licencia. Por eso **no se copia** a los repositorios; se instala por proyecto con `npx skills add dickwu/apple-design-skill` (usar `-a claude-code` si solo se instala para Claude Code), o se agrega como submódulo fijado al commit de §8.1. Para Claude Code, la ruta recomendada del submódulo es `.claude/skills/apple-design`, donde el skill se detecta solo y queda disponible como `/apple-design`. Para otros agentes, `.design-rules/`. Un submódulo solo versiona el puntero al commit, no el texto de Apple. `generate-contexto.py` excluye los submódulos del volcado y Graft los ignora por defecto. Este repositorio aplica la variante `.claude/skills/apple-design`. **La obligación se propaga:** todo repositorio que use dev-standards como base y tenga un dashboard instala el skill de esta forma (`bootstrap-project.sh --dashboard` lo hace solo) y lo declara en su `AGENTS.md` (§5.11). Si un repositorio agrega un dashboard después del bootstrap, lo instala en ese mismo cambio.
+*   **8.3. Revisión Obligatoria:** Todo PR que cree o modifique un dashboard incluye una revisión con el skill, en el formato de su `SKILL.md`: Summary, Critical, Improvements, Craft notes, What works, Platform notes. Cada hallazgo lleva severidad (Critical/High/Medium/Low) y cita `archivo.md › Heading`. Los hallazgos **Critical** bloquean el merge. Además del set que el skill carga siempre (`accessibility.md`, `layout.md`, `typography.md`, `color.md`, la página de plataforma y `cross-platform.md`), en dashboards se cargan `charting-data.md`, `charts.md`, `dark-mode.md` y, según lo que haya en pantalla, `gauges.md`, `lists-and-tables.md`, `sidebars.md`, `widgets.md`, `materials.md` y `loading.md`.
+*   **8.4. Alcance según Plataforma:** En dashboards web o Android aplican los ocho principios de diseño y los fundamentos (accesibilidad, color, tipografía, layout, escritura), pero no las convenciones de plataforma de Apple (tab bars, menu bar, sheets). En dashboards nativos iOS/iPadOS/macOS o empaquetados con Tauri/Electron aplican también las convenciones de plataforma.
+*   **8.5. Mínimos No Negociables** (resumen del skill; ante cualquier discrepancia prevalecen el skill y la página HIG citada):
+    *   **Contraste:** texto de hasta 17 pt, 4.5:1; texto de 18 pt o más, o en negrita, 3:1. Se calcula a partir de los valores hex y el resultado se reporta en la revisión.
+    *   **Tamaños:** texto en escritorio con default de 13 pt y mínimo de 10 pt; en móvil, default de 17 pt y mínimo de 11 pt. Controles en escritorio de 28×28 pt (mínimo 20×20); en móvil, de 44×44 pt (mínimo 28×28).
+    *   **Color:** un color significa una sola cosa en todo el dashboard. Ningún dato ni estado se comunica solo con color; se complementa con forma, patrón, etiqueta o posición. Las áreas de color contiguas (barras apiladas) llevan separadores.
+    *   **Apariencia:** el dashboard funciona en modo claro y oscuro, con colores semánticos (tokens) en lugar de valores fijos, y respeta *reduced motion*, *reduced transparency* e *increased contrast*. Los efectos de blur o vidrio solo se aplican a la capa flotante funcional (barras, paneles), nunca al contenido ni a los gráficos.
+    *   **Gráficos:** se prefieren tipos comunes (barra, línea, punto). El eje Y de un gráfico de barras parte de 0, y los rangos fijos se reservan a magnitudes con mínimo y máximo con sentido (por ejemplo, 0–100 %). Los ticks siguen secuencias familiares (0, 5, 10…). Cada gráfico lleva un título y un resumen textual de su mensaje principal, más etiquetas accesibles que describen lo que representan los datos, no su apariencia. La información crítica nunca depende de una interacción (hover, scrub) para verse.
+    *   **Consistencia:** gráficos con el mismo propósito comparten tipo, colores, anotaciones y layout. Un mismo dataset mantiene su estilo al pasar de la vista compacta a la expandida.
+    *   **Datos sin análisis:** si solo hace falta mostrar valores, sin tendencia ni comparación, se usa una tabla o lista ordenable y buscable, no un gráfico.
+*   **8.6. Punto de Vista, no Plantilla:** Siguiendo el lente de *craft* del skill, se evitan los tres looks genéricos que dominan la UI generada (crema cálido con serif y acento terracota; casi negro con un único acento ácido; retícula de líneas finas, radio cero y columnas densas), así como el "número grande sobre etiqueta chica con acento en gradiente" y los marcadores 01/02/03 sobre contenido que no es una secuencia. Cada dashboard concentra su énfasis en un solo elemento distintivo; navegación y controles usan componentes y convenciones familiares.
+*   **8.7. Tokens de Diseño:** Cada proyecto con dashboard define sus tokens en el SSoT (`config.yaml` o un archivo de tokens referenciado desde él). Como mínimo: de 4 a 6 colores con rol (superficie, contenido, acento, señal), cada uno con variante clara y oscura y su contraste declarado, y una escala tipográfica. Queda prohibido fijar colores o tamaños sueltos en los componentes (§1).
+
+---
+
+## 9. Grafo de Contexto para Agentes (Graft)
+
+*   **9.1. Estándar de Referencia:** Todo repositorio con código fuente se conecta a [`trailhq/Graft`](https://github.com/trailhq/Graft) (paquete npm `@nanonets/graft`, licencia MIT), fijado a la versión `0.19.0`. Graft construye con tree-sitter un grafo del código, en archivos markdown enlazados más un grafo por símbolo, y lo expone a los agentes (Claude Code, Codex, Cursor y otros) mediante un skill, hooks y un servidor MCP. Así el agente no tiene que re-explorar el repo en cada sesión. Actualizar la versión es un cambio explícito que se registra en el CHANGELOG.
+*   **9.2. Instalación y Wiring:** Se instala una vez por máquina con `npm install -g @nanonets/graft@0.19.0` (requiere Node ≥ 20) y, en cada repositorio, se corre `graft init --agents claude --no-global`, agregando más ids de `--agents` si el proyecto usa otros agentes. `--no-global` es obligatorio para que no escriba configuración de nivel usuario (`~/.claude`, `~/.codex`) que afectaría a todos los repos. El bootstrap (§5.6) lo ejecuta automáticamente cuando `graft` está disponible.
+*   **9.3. Qué se Versiona:** Se versiona el wiring que genera `init`: `.claude/settings.json` (bloques de statusline y hooks, fusionados con la configuración existente), `.claude/helpers/graft-*.cjs`, `.claude/skills/graft/SKILL.md`, `.mcp.json` e `.ignore`. El grafo (`graft/`) **no se versiona**: es un caché local regenerable que `graft build` agrega a `.gitignore` y que cada colaborador genera con `graft build`. `contexto_proyecto.md` (§5.10) lo excluye.
+*   **9.4. Capa Estructural por Defecto:** `graft build`, `check`, `ask`, `callers`, `grep`, `map` y `blast` son deterministas y no llaman a ningún modelo ni requieren key. La capa LLM (`graft build --deep`) es opcional, y si se usa envía el código al proveedor configurado. Solo se habilita con un proveedor que el proyecto autorice para su código, con la key inyectada por entorno (`GRAFT_PROVIDER`, `GRAFT_API_KEY`, `GRAFT_MODEL`; §6.4) y nunca versionada.
+*   **9.5. Telemetría Deshabilitada:** Graft envía estadísticas anónimas de uso a un tercero. En todas las máquinas del ecosistema se deshabilita con `graft telemetry disable` y/o `DO_NOT_TRACK=1`. En CI ya viene deshabilitada.
+*   **9.6. Uso en PRs (recomendado):** Todo PR que modifique código puede adjuntar el radio de impacto con `graft blast --base origin/main --format markdown`, que lista las áreas que dependen de las líneas tocadas, para orientar la revisión y los tests.
+*   **9.7. Complementariedad:** Graft no reemplaza a `contexto_proyecto.md` (§5.10) ni a la Wiki (§5.9). El contexto consolidado es un volcado estático y portable a cualquier LLM; Graft es un índice vivo, consultable por el agente durante la sesión. Ambos se mantienen.
 ```
 
 ## Ruta: `scripts/audit-standards.py`
@@ -17028,8 +17540,11 @@ y valida la presencia de:
   - Versión SemVer en manifiesto (package.json, pyproject.toml, Cargo.toml, go.mod, setup.py)
   - CHANGELOG.md (formato Keep a Changelog)
   - README.md con al menos una imagen (![...](...))
+  - Descripción del repo en GitHub no vacía y de ≤350 caracteres (RULES.md §5.8)
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
   - contexto_proyecto.md con la estructura de RULES.md §5.10
+  - AGENTS.md que referencia dev-standards (RULES.md §5.11)
+  - Wiring de Graft (skill o .mcp.json) con graft/ fuera de git (RULES.md §9)
   - .gitignore
   - Dockerfile
   - CI (.github/workflows/*.yml)
@@ -17058,8 +17573,11 @@ class ProjectAudit:
     has_semver: bool
     has_changelog: bool
     readme_has_images: bool
+    has_description: bool
     has_wiki: bool
     has_contexto: bool
+    has_graft: bool
+    has_agents_md: bool
     has_gitignore: bool
     has_dockerfile: bool
     has_ci: bool
@@ -17138,6 +17656,52 @@ def check_readme_images(project_path: Path) -> bool:
     txt = p.read_text(encoding="utf-8", errors="ignore")
     return bool(re.search(r"!\[.*\]\(.*\)", txt))
 
+DESCRIPTION_MAX_CHARS = 350
+GITHUB_REMOTE_RE = re.compile(r"github\.com[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
+
+def github_slug(project_path: Path) -> Optional[str]:
+    """Devuelve 'owner/repo' a partir del remote origin, o None si no apunta a GitHub."""
+    try:
+        url = subprocess.run(
+            ["git", "-C", str(project_path), "remote", "get-url", "origin"],
+            capture_output=True, text=True, timeout=10,
+        ).stdout.strip()
+    except Exception:
+        return None
+    m = GITHUB_REMOTE_RE.search(url)
+    return f"{m.group(1)}/{m.group(2)}" if m else None
+
+def fetch_github_description(slug: str) -> Optional[str]:
+    """Lee el campo 'description' del repo en la API de GitHub. None si la API no responde."""
+    import urllib.request
+
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "dev-standards-audit"}
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(f"https://api.github.com/repos/{slug}", headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read().decode("utf-8")).get("description") or ""
+    except Exception:
+        return None
+
+def check_description(project_path: Path) -> bool:
+    """Verifica la descripción del repo en GitHub: no vacía y <=350 caracteres (RULES.md §5.8).
+
+    Sin remote de GitHub o sin respuesta de la API (red, rate limit, repo privado sin token)
+    el check falla: la regla se refiere al campo del hosting, no al manifiesto.
+    """
+    slug = github_slug(project_path)
+    if not slug:
+        return False
+    desc = fetch_github_description(slug)
+    if desc is None:
+        print(f"  ⚠️  {project_path.name}: no se pudo leer la descripción de {slug} en GitHub")
+        return False
+    desc = desc.strip()
+    return bool(desc) and len(desc) <= DESCRIPTION_MAX_CHARS
+
 REQUIRED_WIKI_PAGES = ("Home.md", "Architecture.md", "Getting-Started.md", "Operations.md")
 WIKI_MIN_CHARS = 80
 
@@ -17169,6 +17733,30 @@ def check_contexto(project_path: Path) -> bool:
     has_files = re.search(r"^# ARCHIVOS DEL PROYECTO\s*$", txt, re.MULTILINE)
     has_route = re.search(r"^## Ruta: `[^`]+`", txt, re.MULTILINE)
     return bool(has_summary and has_files and has_route)
+
+def check_agents_md(project_path: Path) -> bool:
+    """Verifica AGENTS.md en la raíz que declara dev-standards (RULES.md §5.11)."""
+    p = project_path / "AGENTS.md"
+    if not p.is_file():
+        return False
+    return "dev-standards" in p.read_text(encoding="utf-8", errors="ignore")
+
+def check_graft(project_path: Path) -> bool:
+    """Verifica el wiring de Graft y que su caché graft/ no se versione (RULES.md §9)."""
+    wired = (project_path / ".claude" / "skills" / "graft" / "SKILL.md").is_file()
+    mcp = project_path / ".mcp.json"
+    if not wired and mcp.is_file():
+        try:
+            wired = "graft" in json.loads(mcp.read_text(encoding="utf-8")).get("mcpServers", {})
+        except Exception:
+            wired = False
+    if not wired:
+        return False
+    gi = project_path / ".gitignore"
+    if not gi.is_file():
+        return False
+    lines = {ln.strip() for ln in gi.read_text(encoding="utf-8", errors="ignore").splitlines()}
+    return bool(lines & {"/graft/", "graft/", "/graft"})
 
 def check_file_exists(project_path: Path, name: str) -> bool:
     return (project_path / name).exists()
@@ -17241,8 +17829,11 @@ def audit_project(project_path: Path) -> ProjectAudit:
     has_semver = check_semver(project_path, lang)
     has_changelog = check_changelog(project_path)
     readme_has_images = check_readme_images(project_path)
+    has_description = check_description(project_path)
     has_wiki = check_wiki(project_path)
     has_contexto = check_contexto(project_path)
+    has_graft = check_graft(project_path)
+    has_agents_md = check_agents_md(project_path)
     has_gitignore = check_file_exists(project_path, ".gitignore")
     has_dockerfile = check_file_exists(project_path, "Dockerfile")
     has_ci = check_ci(project_path)
@@ -17255,8 +17846,11 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_semver": 10,
         "has_changelog": 10,
         "readme_has_images": 5,
+        "has_description": 5,
         "has_wiki": 5,
         "has_contexto": 5,
+        "has_graft": 5,
+        "has_agents_md": 5,
         "has_gitignore": 5,
         "has_dockerfile": 5,
         "has_ci": 10,
@@ -17277,8 +17871,11 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_semver": has_semver,
         "has_changelog": has_changelog,
         "readme_has_images": readme_has_images,
+        "has_description": has_description,
         "has_wiki": has_wiki,
         "has_contexto": has_contexto,
+        "has_graft": has_graft,
+        "has_agents_md": has_agents_md,
         "has_gitignore": has_gitignore,
         "has_dockerfile": has_dockerfile,
         "has_ci": has_ci,
@@ -17295,8 +17892,11 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_semver=has_semver,
         has_changelog=has_changelog,
         readme_has_images=readme_has_images,
+        has_description=has_description,
         has_wiki=has_wiki,
         has_contexto=has_contexto,
+        has_graft=has_graft,
+        has_agents_md=has_agents_md,
         has_gitignore=has_gitignore,
         has_dockerfile=has_dockerfile,
         has_ci=has_ci,
@@ -17338,8 +17938,11 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("SemVer", a.has_semver),
             ("CHANGELOG", a.has_changelog),
             ("README c/ imágenes", a.readme_has_images),
+            ("Descripción GitHub ≤350 (§5.8)", a.has_description),
             ("Wiki (wiki/ §5.9)", a.has_wiki),
             ("contexto_proyecto.md (§5.10)", a.has_contexto),
+            ("Graft (§9)", a.has_graft),
+            ("AGENTS.md (§5.11)", a.has_agents_md),
             (".gitignore", a.has_gitignore),
             ("Dockerfile", a.has_dockerfile),
             ("CI/CD", a.has_ci),
@@ -17428,7 +18031,7 @@ if __name__ == "__main__":
 ```bash
 #!/usr/bin/env bash
 # bootstrap-project.sh — Scaffolding estándar para nuevos repositorios (RULES.md §5.6)
-# Uso:  bash bootstrap-project.sh [--lang python|node|go|rust] [--name "Mi Proyecto"] [--desc "Descripción breve"]
+# Uso:  bash bootstrap-project.sh [--lang python|node|go|rust] [--name "Mi Proyecto"] [--desc "Descripción breve"] [--dashboard]
 #       Se ejecuta DENTRO de la carpeta del nuevo repo (git init ya hecho).
 
 set -euo pipefail
@@ -17436,13 +18039,20 @@ set -euo pipefail
 LANG="python"
 PROJECT_NAME=""
 PROJECT_DESC=""
+HAS_DASHBOARD=0
 REPO_ROOT="$(pwd)"
+
+# Estándares externos fijados (RULES.md §8.1, §9.1)
+APPLE_DESIGN_URL="https://github.com/dickwu/apple-design-skill.git"
+APPLE_DESIGN_COMMIT="39ea3fbab3011e0798c076dbeabf4917001499da"
+GRAFT_VERSION="0.19.0"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --lang) LANG="$2"; shift 2 ;;
     --name) PROJECT_NAME="$2"; shift 2 ;;
     --desc) PROJECT_DESC="$2"; shift 2 ;;
+    --dashboard) HAS_DASHBOARD=1; shift ;;
     *) echo "Opción desconocida: $1"; exit 1 ;;
   esac
 done
@@ -17453,6 +18063,12 @@ fi
 
 if [[ -z "$PROJECT_DESC" ]]; then
   PROJECT_DESC="Proyecto generado con dev-standards bootstrap"
+fi
+
+# RULES.md §5.8: descripción de máximo 350 caracteres
+if (( ${#PROJECT_DESC} > 350 )); then
+  echo "❌  --desc tiene ${#PROJECT_DESC} caracteres; el máximo es 350 (RULES.md §5.8)" >&2
+  exit 1
 fi
 
 echo "🚀  Bootstrap: $PROJECT_NAME ($LANG)"
@@ -18248,6 +18864,45 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 EOF
 
+# 10b) Graft: grafo de contexto para agentes (RULES.md §9)
+if command -v graft >/dev/null 2>&1; then
+  graft telemetry disable >/dev/null 2>&1 || true
+  (cd "$REPO_ROOT" && DO_NOT_TRACK=1 graft init --agents claude --no-global) \
+    || echo "⚠️  graft init falló: reintenta con graft init --agents claude --no-global (RULES.md §9.2)"
+else
+  echo "⚠️  Graft no instalado: npm install -g @nanonets/graft@${GRAFT_VERSION} && graft init --agents claude --no-global (RULES.md §9.2)"
+fi
+
+# 10c) apple-design-skill para dashboards (RULES.md §8.2), solo con --dashboard
+if (( HAS_DASHBOARD )); then
+  if git -C "$REPO_ROOT" submodule add -q "$APPLE_DESIGN_URL" .claude/skills/apple-design \
+     && git -C "$REPO_ROOT/.claude/skills/apple-design" checkout -q "$APPLE_DESIGN_COMMIT"; then
+    git -C "$REPO_ROOT" add .gitmodules .claude/skills/apple-design
+    echo "🎨  apple-design-skill agregado como submódulo fijado a ${APPLE_DESIGN_COMMIT:0:7} (RULES.md §8)"
+  else
+    echo "⚠️  No se pudo agregar apple-design-skill: git submodule add $APPLE_DESIGN_URL .claude/skills/apple-design (RULES.md §8.2)"
+  fi
+fi
+
+# 10d) AGENTS.md + CLAUDE.md: estándares de dev-standards para los agentes (RULES.md §5.11)
+if (( HAS_DASHBOARD )); then
+  DASHBOARD_LINE="- **Dashboards (§8):** todo PR que cree o modifique un dashboard incluye la revisión de \`/apple-design\` (submódulo \`.claude/skills/apple-design\`). Los hallazgos Critical bloquean el merge."
+else
+  DASHBOARD_LINE="- **Dashboards (§8):** si se agrega un dashboard, instalar \`apple-design-skill\` como submódulo en \`.claude/skills/apple-design\` (fijado a \`${APPLE_DESIGN_COMMIT:0:7}\`) y revisar con \`/apple-design\` cada PR que lo toque."
+fi
+cat > AGENTS.md <<EOF
+# AGENTS.md — $PROJECT_NAME
+
+Este repositorio sigue [dev-standards](https://github.com/luciomerlo/dev-standards) ([RULES.md](https://github.com/luciomerlo/dev-standards/blob/main/RULES.md)). Antes de proponer o hacer cambios, aplicar:
+
+$DASHBOARD_LINE
+- **Graft (§9):** usar \`graft ask\` / \`graft callers\` antes de leer o cambiar código. El wiring se versiona en \`.claude/\` y \`.mcp.json\`; \`graft/\` no se versiona.
+- **Rendimiento (§3.4):** con interfaz web, sugerir \`/fix\` al cerrar el desarrollo inicial, antes del primer release.
+- **Contexto (§5.10) y Wiki (§5.9):** regenerar \`contexto_proyecto.md\` y actualizar \`wiki/\` en el mismo cambio que altere código, uso o arquitectura.
+- **Secretos (§6):** nunca versionar credenciales; se inyectan solo por entorno.
+EOF
+[[ -f CLAUDE.md ]] || printf '@AGENTS.md\n' > CLAUDE.md
+
 # 11) contexto_proyecto.md (RULES.md §5.10)
 cp "$(dirname "${BASH_SOURCE[0]}")/generate-contexto.py" scripts/generate-contexto.py 2>/dev/null || \
   curl -fsSL https://raw.githubusercontent.com/luciomerlo/dev-standards/main/scripts/generate-contexto.py -o scripts/generate-contexto.py
@@ -18260,6 +18915,17 @@ else
   echo "⚠️  Python no disponible: ejecuta luego python scripts/generate-contexto.py"
 fi
 
+# 12) Descripción del repositorio en GitHub (RULES.md §5.8)
+if command -v gh >/dev/null 2>&1 && git -C "$REPO_ROOT" remote get-url origin 2>/dev/null | grep -q github.com; then
+  if (cd "$REPO_ROOT" && gh repo edit --description "$PROJECT_DESC" >/dev/null 2>&1); then
+    echo "📝  Descripción de GitHub actualizada (${#PROJECT_DESC}/350 caracteres)"
+  else
+    echo "⚠️  No se pudo actualizar la descripción en GitHub: gh repo edit --description \"...\""
+  fi
+else
+  echo "⚠️  Sin gh o sin remote de GitHub: fija la descripción del repo (inglés, ≤350 caracteres, RULES.md §5.8)"
+fi
+
 echo "✅  Scaffold completado en $REPO_ROOT"
 echo "   → Edita README.md (badges, diagrama, capturas)"
 echo "   → Rellena wiki/ (Home, Architecture, Getting-Started, Operations)"
@@ -18267,6 +18933,7 @@ echo "   → Regenera contexto_proyecto.md si cambia código o configuración (p
 echo "   → Revisa config.yaml y .env.example"
 echo "   → Añade tests en tests/ y código en src/"
 echo "   → Haz commit y push; CI se activará automáticamente"
+echo "   → Con interfaz web: al cerrar el desarrollo inicial, corre /fix antes del primer release (RULES.md §3.4)"
 ```
 
 ## Ruta: `scripts/check-secrets.py`
@@ -18424,6 +19091,9 @@ EXCLUDE_DIRS = {
     "vendor",
     "venv",
 }
+
+# Directorios excluidos solo en la raíz: caché local de Graft (RULES.md §9.3).
+ROOT_EXCLUDE_DIRS = {"graft"}
 
 # Salidas generadas: no se vuelcan (el propio contexto se excluye por ruta).
 ROOT_GENERATED = {"AUDIT_REPORT.md", "project_audit_summary.csv"}
@@ -18609,6 +19279,15 @@ def language_for(path: Path) -> str:
     return SUFFIX_LANG.get(path.suffix.lower(), "text")
 
 
+def submodule_paths(root: Path) -> set[str]:
+    """Rutas de submódulos declarados en .gitmodules: código externo, no se vuelca."""
+    gm = root / ".gitmodules"
+    if not gm.is_file():
+        return set()
+    txt = gm.read_text(encoding="utf-8", errors="ignore")
+    return {m.strip().strip("/") for m in re.findall(r"^\s*path\s*=\s*(.+)$", txt, re.MULTILINE)}
+
+
 def collect(
     root: Path, output: Path
 ) -> tuple[list[tuple[str, str]], list[str], list[str], list[str]]:
@@ -18618,12 +19297,18 @@ def collect(
     skipped_generated: list[str] = []
     skipped_other: list[str] = []
     output_resolved = output.resolve()
+    submodules = submodule_paths(root)
 
     for dirpath, dirnames, filenames in os.walk(root):
         current = Path(dirpath)
         kept: list[str] = []
         for dirname in sorted(dirnames):
-            if dirname in EXCLUDE_DIRS:
+            rel_dir = (current / dirname).relative_to(root).as_posix()
+            if (
+                dirname in EXCLUDE_DIRS
+                or (current == root and dirname in ROOT_EXCLUDE_DIRS)
+                or rel_dir in submodules
+            ):
                 skipped_dirs.append((current / dirname).relative_to(root).as_posix())
                 continue
             kept.append(dirname)
@@ -19819,6 +20504,8 @@ if __name__ == "__main__":
 * [Getting Started](Getting-Started)
 * [Operations](Operations)
 * [Compute](Compute)
+* [Dashboards](Dashboards)
+* [Graft](Graft)
 * [RULES.md](../RULES.md)
 * [README](../README.md)
 * [CHANGELOG](../CHANGELOG.md)
@@ -19868,11 +20555,13 @@ graph TD
 |---------|------|
 | §1 | SSoT, registry, modelos híbridos, memoria de agentes, esquemas flexibles |
 | §2 | Retry/backoff, fallback multi-modelo, BD local, puertos |
-| §3 | Zero-disk I/O, async, caché multinivel |
+| §3 | Zero-disk I/O, async, caché multinivel, pasada de rendimiento `/fix` al cerrar el desarrollo inicial |
 | §4 | Clasificación de errores, evidencia, `status.json` |
-| §5 | SemVer, CHANGELOG, higiene, pins, README, bootstrap, auditoría, descripción, Wiki, contexto LLM |
+| §5 | SemVer, CHANGELOG, higiene, pins, README, bootstrap, auditoría, descripción, Wiki, contexto LLM, `AGENTS.md` con estándares externos |
 | §6 | Prohibición de secretos hardcodeados, escaneo automatizado, falsos positivos, `.env` |
 | §7 | Detección de CUDA, los 5 backends de cómputo, selección de UI/CLI, exclusión de modelos de difusión, implementación de referencia |
+| §8 | Estética de dashboards: `apple-design-skill` (Apple HIG) fijado por commit, revisión obligatoria en PR, mínimos de contraste/tamaño/color/gráficos, anti-plantilla, tokens |
+| §9 | Graft: grafo de contexto para agentes fijado a `0.19.0`, wiring versionado, `graft/` como caché, capa LLM opcional, telemetría deshabilitada |
 ````
 
 ## Ruta: `wiki/Compute.md`
@@ -19992,6 +20681,101 @@ etc.) en vez de reimplementar la detección desde cero.
    proyecto la adoptó) en el mismo cambio (RULES.md §5.9).
 ```
 
+## Ruta: `wiki/Dashboards.md`
+
+````markdown
+# Dashboards — dev-standards
+
+Estética y revisión de dashboards según RULES.md §8. El estándar es el skill [`dickwu/apple-design-skill`](https://github.com/dickwu/apple-design-skill), que revisa diseños contra las Human Interface Guidelines de Apple (123 páginas) y además aplica un lente de *craft* que detecta UI de plantilla.
+
+Commit fijado: `39ea3fbab3011e0798c076dbeabf4917001499da` (2026-09-22).
+
+## En repos que usan dev-standards como base
+
+El estándar se propaga (RULES.md §8.2, §5.11):
+
+- **Repo nuevo con dashboard:** `bash scripts/bootstrap-project.sh --dashboard …` agrega el submódulo fijado y un `AGENTS.md` que exige `/apple-design` en cada PR que toque el dashboard.
+- **Repo existente que suma un dashboard:** en ese mismo cambio, agregar el submódulo (opción B) y la línea de §8 en su `AGENTS.md`.
+- La versión fijada vigente está en el [AGENTS.md](../AGENTS.md) de dev-standards.
+
+## Por qué no se copia a los repos
+
+El texto de las guías es de Apple Inc. y el repositorio del skill no incluye archivo de licencia. Por eso cada proyecto lo instala o lo referencia en vez de vendorizarlo.
+
+## Instalación en un proyecto
+
+Opción A, con el CLI de skills (Claude Code, Cursor, Codex y otros agentes):
+
+```bash
+npx skills add dickwu/apple-design-skill -a claude-code
+```
+
+Opción B, como submódulo fijado. Es la variante que usa este repo, en `.claude/skills/apple-design`, donde Claude Code detecta el skill sin configuración:
+
+```bash
+git submodule add https://github.com/dickwu/apple-design-skill.git .claude/skills/apple-design
+git -C .claude/skills/apple-design checkout 39ea3fbab3011e0798c076dbeabf4917001499da
+git add .gitmodules .claude/skills/apple-design
+```
+
+Al clonar un repo con el submódulo: `git clone --recurse-submodules …` o, en un clon existente, `git submodule update --init`.
+
+Opción C, submódulo en `.design-rules/`, para agentes que leen `AGENTS.md` o archivos de reglas:
+
+```bash
+git submodule add https://github.com/dickwu/apple-design-skill.git .design-rules
+git -C .design-rules checkout 39ea3fbab3011e0798c076dbeabf4917001499da
+git add .gitmodules .design-rules
+```
+
+Con la opción B, agregar al `AGENTS.md` o `CLAUDE.md` del proyecto:
+
+```markdown
+## Revisión de dashboards (RULES.md §8)
+
+Seguir `.design-rules/SKILL.md`. Rutear temas con `.design-rules/references/hig-lookup.md` y cargar
+los `.design-rules/references/hig/*.md` relevantes antes de dar feedback de diseño.
+```
+
+## Flujo en un PR que toca un dashboard
+
+1. Pedir la revisión: en Claude Code, `/apple-design` o *"Review this dashboard against Apple's HIG"*.
+2. Además del set que el skill carga siempre, cargar `charting-data.md`, `charts.md` y `dark-mode.md`, y según lo que haya en pantalla `gauges.md`, `lists-and-tables.md`, `sidebars.md`, `widgets.md`, `materials.md` o `loading.md`.
+3. Pegar el reporte en la descripción del PR, con estas secciones: Summary, Critical, Improvements, Craft notes, What works, Platform notes.
+4. Resolver todo hallazgo **Critical** antes del merge. Los High se resuelven o se justifican en el PR.
+
+## Checklist rápido (§8.5)
+
+| Ítem | Criterio |
+|------|----------|
+| Contraste | 4.5:1 para texto de hasta 17 pt; 3:1 para ≥18 pt o negrita. Calculado a partir del hex |
+| Texto mínimo | 10 pt en escritorio, 11 pt en móvil |
+| Controles | 28×28 pt en escritorio (mínimo 20×20); 44×44 pt en móvil (mínimo 28×28) |
+| Color | Un color, un significado; nunca como único canal; separadores entre áreas contiguas |
+| Claro / oscuro | Ambos modos con tokens semánticos; *reduced motion* y *increased contrast* respetados |
+| Blur / vidrio | Solo en la capa flotante (barras, paneles), nunca sobre datos |
+| Tipo de gráfico | Barra, línea o punto salvo razón explícita; barras con eje Y desde 0 |
+| Ejes | Ticks en secuencias familiares (0, 5, 10…); grid liviano que no compita con los datos |
+| Texto | Título + resumen del mensaje principal por gráfico; etiquetas accesibles con valores reales |
+| Interacción | Nada crítico escondido detrás de hover o scrub |
+| Consistencia | Mismo propósito → mismo estilo; misma serie → mismo color en todo el dashboard |
+| Tabla vs. gráfico | Si solo se muestran valores, tabla ordenable/buscable |
+| Plantilla | Ninguno de los tres looks genéricos de §8.6; un solo elemento distintivo |
+| Tokens | 4–6 colores con rol y variante clara/oscura, y escala tipográfica, definidos en el SSoT (§8.7) |
+
+## Alcance
+
+- **Web / Android** (incluye Looker Studio, Grafana, Streamlit): principios y fundamentos. Las convenciones de plataforma de Apple no aplican.
+- **iOS / iPadOS / macOS nativo, Tauri, Electron**: todo lo anterior más las convenciones de plataforma (menu bar, sidebars, toolbars).
+- Herramientas con tema cerrado (por ejemplo, Looker Studio): se aplican los mínimos que la herramienta permita controlar (paleta, contraste, tipos de gráfico, títulos y resúmenes) y lo que no se pueda controlar se anota como limitación en la revisión.
+
+## Actualizar el pin
+
+1. Revisar los cambios upstream (`git log` del skill) y el changelog de las páginas HIG afectadas.
+2. Cambiar el commit en RULES.md §8.1 y en esta página.
+3. Registrar el cambio en `CHANGELOG.md`.
+````
+
 ## Ruta: `wiki/Getting-Started.md`
 
 ````markdown
@@ -20014,9 +20798,9 @@ bash /ruta/a/dev-standards/scripts/bootstrap-project.sh \
   --desc "Descripción breve"
 ```
 
-`--lang` acepta `python`, `node`, `go` o `rust`. Sin `--name` usa el basename del directorio.
+`--lang` acepta `python`, `node`, `go` o `rust`. Sin `--name` usa el basename del directorio. `--dashboard` agrega `apple-design-skill` como submódulo fijado (§8.2).
 
-El script genera README, CHANGELOG, manifiesto con `0.1.0`, `.gitignore`, Dockerfile, CI, `.env.example`, `config.yaml`, `wiki/` con las cuatro páginas mínimas (§5.9) y `contexto_proyecto.md` (§5.10).
+El script genera README, CHANGELOG, manifiesto con `0.1.0`, `.gitignore`, Dockerfile, CI, `.env.example`, `config.yaml`, `wiki/` con las cuatro páginas mínimas (§5.9), `contexto_proyecto.md` (§5.10) y `AGENTS.md` + `CLAUDE.md` con los estándares externos que aplican (§5.11).
 
 Después del scaffold:
 
@@ -20025,6 +20809,18 @@ Después del scaffold:
 3. Poner la descripción del hosting en inglés, ≤350 caracteres, alineada al README (§5.8).
 4. Añadir código en `src/` y tests en `tests/`.
 5. Regenerar `contexto_proyecto.md` (`python scripts/generate-contexto.py`) en el mismo cambio que toque código, configuración o documentación normativa (§5.10).
+6. Conectar Graft si el bootstrap no lo hizo: `graft init --agents claude --no-global` y versionar el wiring (§9, [Graft](Graft.md)).
+7. Si el proyecto tiene interfaz web: al cerrar el desarrollo inicial (primera versión usable de punta a punta, antes del primer release), correr `/fix` para medir y corregir los caminos lentos. Adjuntar el reporte, con los números de antes y después, al PR o al release (§3.4).
+
+## Clonar este repositorio
+
+```bash
+git clone --recurse-submodules https://github.com/luciomerlo/dev-standards.git
+# en un clon existente:
+git submodule update --init
+```
+
+El submódulo `.claude/skills/apple-design` es el skill de revisión de dashboards (§8). Sin inicializarlo, el resto del repo funciona igual.
 
 ## Adoptar en un repo que ya existe
 
@@ -20042,6 +20838,10 @@ No hace falta re-bootstrap si el árbol ya tiene manifiesto, CI y README. Falta 
 6. Copiar `scripts/generate-contexto.py` y generar `contexto_proyecto.md`
    (`python scripts/generate-contexto.py`). Regenerarlo cada vez que cambie
    código, configuración o documentación normativa (§5.10).
+7. Instalar Graft (`npm install -g @nanonets/graft@0.19.0`), correr
+   `graft init --agents claude --no-global` y versionar `.claude/`, `.mcp.json`,
+   `.ignore` y `.gitignore` (§9).
+8. Crear `AGENTS.md` (y `CLAUDE.md` con `@AGENTS.md`) que declare dev-standards y liste los estándares externos que aplican. Si hay un dashboard, agregar `apple-design-skill` como submódulo en `.claude/skills/apple-design` (§5.11, §8.2, [Dashboards](Dashboards.md)).
 
 ## Añadir o cambiar un estándar
 
@@ -20049,6 +20849,76 @@ No hace falta re-bootstrap si el árbol ya tiene manifiesto, CI y README. Falta 
 2. Si el estándar es comprobable: extender `scripts/audit-standards.py`.
 3. Si nace con el repo: extender `scripts/bootstrap-project.sh`.
 4. Actualizar esta Wiki y el checklist del README en el mismo cambio.
+````
+
+## Ruta: `wiki/Graft.md`
+
+````markdown
+# Graft — dev-standards
+
+Grafo de contexto del código para agentes, según RULES.md §9. Usa [`trailhq/Graft`](https://github.com/trailhq/Graft) (npm `@nanonets/graft`, MIT), fijado a la versión `0.19.0`.
+
+## Qué hace
+
+- Con tree-sitter, sin LLM ni key, construye `graft/`: un grafo por símbolo (`graft/.graph/wiring.json`) y tarjetas markdown por archivo.
+- Conecta el grafo a Claude Code con un skill, hooks (statusline, blast radius al editar, re-sync al final de cada turno) y un servidor MCP (`graft_find_code`, `graft_file_api`, `graft_trace_calls`, `graft_find_all`, `graft_repo_map`, `graft_check_freshness`).
+- Cada consulta refresca el grafo contra el working tree (~3 ms si no cambió nada), así que no hay índice desactualizado que mantener.
+
+## Instalación (una vez por máquina)
+
+```bash
+npm install -g @nanonets/graft@0.19.0   # Node >= 20
+graft telemetry disable                 # §9.5
+```
+
+## Conectar un repositorio
+
+```bash
+graft init --agents claude --no-global --dry-run   # revisar qué escribe
+graft init --agents claude --no-global
+git add .claude .mcp.json .ignore .gitignore
+git commit -m "chore: wire in graft (RULES.md §9)"
+```
+
+`--no-global` evita escribir en `~/.claude` / `~/.codex`. Para otros agentes: `--agents claude agents cursor` (ids: `graft init --list-agents`).
+
+`bootstrap-project.sh` ejecuta este paso si `graft` está en el `PATH`.
+
+## Qué se versiona y qué no
+
+| Ruta | Versionar | Nota |
+|------|-----------|------|
+| `.claude/settings.json` | Sí | `init` fusiona sus bloques; no pisa lo existente |
+| `.claude/helpers/graft-*.cjs` | Sí | Shims. Contienen la ruta de instalación global de la máquina que corrió `init`; en otras máquinas resuelven el paquete con `npm root -g` |
+| `.claude/skills/graft/SKILL.md` | Sí | Skill para Claude Code |
+| `.mcp.json` | Sí | Registra el servidor MCP (`graft mcp`) |
+| `.ignore` | Sí | Mantiene `graft/` visible para ripgrep aunque esté en `.gitignore` |
+| `graft/` | **No** | Caché local; cada colaborador corre `graft build` |
+
+## Uso diario
+
+```bash
+graft ask "¿dónde se valida el token?"      # nodos rankeados con file:line
+graft callers audit_project -d 2             # quién depende de un símbolo
+graft map                                    # orientación del repo
+graft blast --base origin/main --format markdown   # radio de impacto de un PR (§9.6)
+graft check                                  # exit 1 si el grafo se desvió del código
+```
+
+## Capa LLM (opcional)
+
+`graft build --deep` agrega resúmenes por archivo y nodos conceptuales, y para eso envía el código al proveedor configurado. Solo se usa con un proveedor autorizado para el código del proyecto y con la key por entorno (`GRAFT_PROVIDER`, `GRAFT_API_KEY`, `GRAFT_MODEL`), nunca versionada (§6.4).
+
+## Relación con otros estándares
+
+- **`contexto_proyecto.md` (§5.10):** es un volcado estático y portable a cualquier LLM. Graft es un índice vivo para la sesión del agente. Se mantienen los dos, y el generador de contexto excluye `graft/`.
+- **Auditoría (§5.7):** `check_graft()` exige el skill o la entrada `graft` en `.mcp.json`, y `/graft/` en `.gitignore`.
+
+## Desinstalar
+
+```bash
+graft uninstall -y --no-global
+```
 ````
 
 ## Ruta: `wiki/Home.md`
@@ -20064,7 +20934,8 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 
 | Artefacto | Rol |
 |-----------|-----|
-| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§7) |
+| [AGENTS.md](../AGENTS.md) | Estándares externos, con sus versiones fijadas, que aplican los repos consumidores (§5.11) |
+| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§9) |
 | [docs/code-standards.md](../docs/code-standards.md) | Nomenclatura, lint, testing, review |
 | [docs/commit-conventions.md](../docs/commit-conventions.md) | Conventional Commits, branches, PRs |
 | `scripts/bootstrap-project.sh` | Scaffold obligatorio de un repo nuevo (§5.6) |
@@ -20078,6 +20949,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | `scripts/transcribe_via_groq.py` | Cliente del backend `cloud-api` para Whisper (Groq) (§7.2) |
 | `scripts/run_on_modal.py` | Cliente del backend `modal` (Modal, ~$30 USD/mes gratis) (§7.2) |
 | `config.yaml` | SSoT de configuración de dominio (§1.1) |
+| `.claude/skills/apple-design` | Submódulo fijado de `apple-design-skill`, el skill de revisión de dashboards (§8) |
 | `wiki/` | Esta Wiki, versionada con el código (§5.9) |
 | `contexto_proyecto.md` | Resumen de arquitectura y contenido completo del código y la configuración (§5.10) |
 
@@ -20089,6 +20961,8 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | [Getting Started](Getting-Started.md) | Bootstrap de un repo nuevo y adopción en uno existente |
 | [Operations](Operations.md) | Cómo correr la auditoría, el escaneo de secretos, baseline y CI |
 | [Compute](Compute.md) | Cómputo local vs. web: los 5 backends (local/colab/cloud-api/cloud-serverless/modal) y cómo elegir uno por proyecto |
+| [Dashboards](Dashboards.md) | Estética y revisión de dashboards con `apple-design-skill` (Apple HIG), checklist e instalación (§8) |
+| [Graft](Graft.md) | Grafo de contexto del código para agentes: instalación, wiring, qué se versiona, uso y telemetría (§9) |
 
 ## Regla de actualización
 
@@ -20114,6 +20988,12 @@ Recorre cada subdirectorio de `--root` (ignora los que empiezan por `.`) y punt�
 
 `--fail-on-regression` sale con código 1 si algún proyecto baja de score respecto a `audit_baseline.json`.
 
+### Check de descripción (§5.8)
+
+`check_description()` obtiene `owner/repo` del remote `origin` y lee el campo "description" del repositorio en la API de GitHub (`GET /repos/{owner}/{repo}`). Aprueba si no está vacío y tiene 350 caracteres como máximo. Usa `GITHUB_TOKEN` o `GH_TOKEN` si están definidos (necesario para repos privados y para evitar el rate limit de 60 req/h). Sin remote de GitHub o sin respuesta de la API, el check falla y lo avisa por consola.
+
+`bootstrap-project.sh` rechaza un `--desc` de más de 350 caracteres y, si `gh` está disponible y el remote es de GitHub, lo aplica con `gh repo edit --description`. El idioma (inglés) no se valida automáticamente.
+
 ### Check de Wiki (§5.9)
 
 El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` y `Operations.md`. Cada archivo debe tener un heading Markdown y al menos 80 caracteres de contenido real.
@@ -20125,6 +21005,14 @@ El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` 
 ```bash
 python scripts/generate-contexto.py
 ```
+
+### Check de AGENTS.md (§5.11)
+
+`check_agents_md()` exige un `AGENTS.md` en la raíz que mencione `dev-standards`. No verifica que el submódulo de `apple-design-skill` exista, porque el auditor no puede saber si el repo tiene un dashboard; esa parte se revisa en el PR.
+
+### Check de Graft (§9)
+
+`check_graft()` exige `.claude/skills/graft/SKILL.md` o una entrada `graft` en `mcpServers` de `.mcp.json`, y `/graft/` en `.gitignore` para que el caché no se versione. No valida la versión instalada ni que el grafo esté actualizado; para eso, `graft check` en local.
 
 ### Check de escaneo de secretos (§6)
 

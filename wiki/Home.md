@@ -8,7 +8,8 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 
 | Artefacto | Rol |
 |-----------|-----|
-| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§7) |
+| [AGENTS.md](../AGENTS.md) | Estándares externos, con sus versiones fijadas, que aplican los repos consumidores (§5.11) |
+| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§9) |
 | [docs/code-standards.md](../docs/code-standards.md) | Nomenclatura, lint, testing, review |
 | [docs/commit-conventions.md](../docs/commit-conventions.md) | Conventional Commits, branches, PRs |
 | `scripts/bootstrap-project.sh` | Scaffold obligatorio de un repo nuevo (§5.6) |
@@ -22,6 +23,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | `scripts/transcribe_via_groq.py` | Cliente del backend `cloud-api` para Whisper (Groq) (§7.2) |
 | `scripts/run_on_modal.py` | Cliente del backend `modal` (Modal, ~$30 USD/mes gratis) (§7.2) |
 | `config.yaml` | SSoT de configuración de dominio (§1.1) |
+| `.claude/skills/apple-design` | Submódulo fijado de `apple-design-skill`, el skill de revisión de dashboards (§8) |
 | `wiki/` | Esta Wiki, versionada con el código (§5.9) |
 | `contexto_proyecto.md` | Resumen de arquitectura y contenido completo del código y la configuración (§5.10) |
 
@@ -33,6 +35,8 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | [Getting Started](Getting-Started.md) | Bootstrap de un repo nuevo y adopción en uno existente |
 | [Operations](Operations.md) | Cómo correr la auditoría, el escaneo de secretos, baseline y CI |
 | [Compute](Compute.md) | Cómputo local vs. web: los 5 backends (local/colab/cloud-api/cloud-serverless/modal) y cómo elegir uno por proyecto |
+| [Dashboards](Dashboards.md) | Estética y revisión de dashboards con `apple-design-skill` (Apple HIG), checklist e instalación (§8) |
+| [Graft](Graft.md) | Grafo de contexto del código para agentes: instalación, wiring, qué se versiona, uso y telemetría (§9) |
 
 ## Regla de actualización
 

@@ -14,6 +14,12 @@ Recorre cada subdirectorio de `--root` (ignora los que empiezan por `.`) y punt�
 
 `--fail-on-regression` sale con código 1 si algún proyecto baja de score respecto a `audit_baseline.json`.
 
+### Check de descripción (§5.8)
+
+`check_description()` obtiene `owner/repo` del remote `origin` y lee el campo "description" del repositorio en la API de GitHub (`GET /repos/{owner}/{repo}`). Aprueba si no está vacío y tiene 350 caracteres como máximo. Usa `GITHUB_TOKEN` o `GH_TOKEN` si están definidos (necesario para repos privados y para evitar el rate limit de 60 req/h). Sin remote de GitHub o sin respuesta de la API, el check falla y lo avisa por consola.
+
+`bootstrap-project.sh` rechaza un `--desc` de más de 350 caracteres y, si `gh` está disponible y el remote es de GitHub, lo aplica con `gh repo edit --description`. El idioma (inglés) no se valida automáticamente.
+
 ### Check de Wiki (§5.9)
 
 El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` y `Operations.md`. Cada archivo debe tener un heading Markdown y al menos 80 caracteres de contenido real.
@@ -25,6 +31,14 @@ El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` 
 ```bash
 python scripts/generate-contexto.py
 ```
+
+### Check de AGENTS.md (§5.11)
+
+`check_agents_md()` exige un `AGENTS.md` en la raíz que mencione `dev-standards`. No verifica que el submódulo de `apple-design-skill` exista, porque el auditor no puede saber si el repo tiene un dashboard; esa parte se revisa en el PR.
+
+### Check de Graft (§9)
+
+`check_graft()` exige `.claude/skills/graft/SKILL.md` o una entrada `graft` en `mcpServers` de `.mcp.json`, y `/graft/` en `.gitignore` para que el caché no se versione. No valida la versión instalada ni que el grafo esté actualizado; para eso, `graft check` en local.
 
 ### Check de escaneo de secretos (§6)
 

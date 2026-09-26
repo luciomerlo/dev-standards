@@ -8,6 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- RULES.md §5.11: repositories that use dev-standards as a knowledge base carry an `AGENTS.md` (plus
+  `CLAUDE.md` importing it) that declares dev-standards and lists the external standards to apply
+  (`apple-design-skill` §8, Graft §9, `/fix` §3.4). §8.2 now states that the apple-design obligation
+  propagates to every consuming repo with a dashboard. Root `AGENTS.md` holds the canonical list and
+  pinned versions. `bootstrap-project.sh` gains `--dashboard` (adds the pinned submodule) and writes
+  `AGENTS.md`/`CLAUDE.md`; `audit-standards.py` gains `check_agents_md()`.
+- This repository adopts RULES.md §8: `dickwu/apple-design-skill` added as a git submodule at
+  `.claude/skills/apple-design`, pinned to `39ea3fb`, so Claude Code exposes `/apple-design`.
+  `generate-contexto.py` now skips every path listed in `.gitmodules`.
+- RULES.md §9 (Graft): every source repository is wired to [`trailhq/Graft`](https://github.com/trailhq/Graft)
+  (`@nanonets/graft@0.19.0`) with `graft init --agents claude --no-global`; the wiring (`.claude/`,
+  `.mcp.json`, `.ignore`) is committed, `graft/` stays a git-ignored cache, `--deep` is opt-in, telemetry
+  is disabled. Audit check `check_graft()`, bootstrap step, `generate-contexto.py` skips root `graft/`,
+  new Wiki page `wiki/Graft.md`. This repository is wired.
+- RULES.md §3.4: repositories with a web UI run the `/fix` performance skill (measure first,
+  then hidden reloads, non-Latin-1 regex hot paths, typing re-render storms, costly `:has()`,
+  late layout shifts, repeated work) once initial development is done and before the first
+  release, and again on slowness symptoms; agents must suggest it. Bootstrap next-steps and
+  `wiki/Getting-Started.md` mention it.
+- RULES.md §8 (Estética de Dashboards): every dashboard is designed and reviewed with
+  [`dickwu/apple-design-skill`](https://github.com/dickwu/apple-design-skill) (Apple HIG), pinned to
+  commit `39ea3fb`, installed per project rather than vendored (Apple-owned text, no upstream license).
+  PRs touching a dashboard carry the skill's review; Critical findings block merge. Adds minimums for
+  contrast, sizes, color, light/dark, charts, anti-template craft, and design tokens in the SSoT.
+  New Wiki page `wiki/Dashboards.md`.
+- RULES.md §5.8 audit check: `scripts/audit-standards.py` reads the repository's GitHub
+  description via the REST API (`origin` remote; `GITHUB_TOKEN`/`GH_TOKEN` optional) and requires
+  it non-empty and at most 350 characters. `bootstrap-project.sh` rejects a longer `--desc` and
+  applies it with `gh repo edit --description` when `gh` is available.
 - RULES.md §5.10: every repository must keep an up-to-date `contexto_proyecto.md` at the
   root (architecture summary plus the full text of relevant source, config, and normative
   docs) so a later LLM can read the codebase without walking the tree. Reference generator:

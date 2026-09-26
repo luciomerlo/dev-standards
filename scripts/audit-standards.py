@@ -10,8 +10,11 @@ y valida la presencia de:
   - Versión SemVer en manifiesto (package.json, pyproject.toml, Cargo.toml, go.mod, setup.py)
   - CHANGELOG.md (formato Keep a Changelog)
   - README.md con al menos una imagen (![...](...))
+  - Descripción del repo en GitHub no vacía y de ≤350 caracteres (RULES.md §5.8)
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
   - contexto_proyecto.md con la estructura de RULES.md §5.10
+  - AGENTS.md que referencia dev-standards (RULES.md §5.11)
+  - Wiring de Graft (skill o .mcp.json) con graft/ fuera de git (RULES.md §9)
   - .gitignore
   - Dockerfile
   - CI (.github/workflows/*.yml)
@@ -40,8 +43,11 @@ class ProjectAudit:
     has_semver: bool
     has_changelog: bool
     readme_has_images: bool
+    has_description: bool
     has_wiki: bool
     has_contexto: bool
+    has_graft: bool
+    has_agents_md: bool
     has_gitignore: bool
     has_dockerfile: bool
     has_ci: bool
@@ -120,6 +126,52 @@ def check_readme_images(project_path: Path) -> bool:
     txt = p.read_text(encoding="utf-8", errors="ignore")
     return bool(re.search(r"!\[.*\]\(.*\)", txt))
 
+DESCRIPTION_MAX_CHARS = 350
+GITHUB_REMOTE_RE = re.compile(r"github\.com[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
+
+def github_slug(project_path: Path) -> Optional[str]:
+    """Devuelve 'owner/repo' a partir del remote origin, o None si no apunta a GitHub."""
+    try:
+        url = subprocess.run(
+            ["git", "-C", str(project_path), "remote", "get-url", "origin"],
+            capture_output=True, text=True, timeout=10,
+        ).stdout.strip()
+    except Exception:
+        return None
+    m = GITHUB_REMOTE_RE.search(url)
+    return f"{m.group(1)}/{m.group(2)}" if m else None
+
+def fetch_github_description(slug: str) -> Optional[str]:
+    """Lee el campo 'description' del repo en la API de GitHub. None si la API no responde."""
+    import urllib.request
+
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "dev-standards-audit"}
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(f"https://api.github.com/repos/{slug}", headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read().decode("utf-8")).get("description") or ""
+    except Exception:
+        return None
+
+def check_description(project_path: Path) -> bool:
+    """Verifica la descripción del repo en GitHub: no vacía y <=350 caracteres (RULES.md §5.8).
+
+    Sin remote de GitHub o sin respuesta de la API (red, rate limit, repo privado sin token)
+    el check falla: la regla se refiere al campo del hosting, no al manifiesto.
+    """
+    slug = github_slug(project_path)
+    if not slug:
+        return False
+    desc = fetch_github_description(slug)
+    if desc is None:
+        print(f"  ⚠️  {project_path.name}: no se pudo leer la descripción de {slug} en GitHub")
+        return False
+    desc = desc.strip()
+    return bool(desc) and len(desc) <= DESCRIPTION_MAX_CHARS
+
 REQUIRED_WIKI_PAGES = ("Home.md", "Architecture.md", "Getting-Started.md", "Operations.md")
 WIKI_MIN_CHARS = 80
 
@@ -151,6 +203,30 @@ def check_contexto(project_path: Path) -> bool:
     has_files = re.search(r"^# ARCHIVOS DEL PROYECTO\s*$", txt, re.MULTILINE)
     has_route = re.search(r"^## Ruta: `[^`]+`", txt, re.MULTILINE)
     return bool(has_summary and has_files and has_route)
+
+def check_agents_md(project_path: Path) -> bool:
+    """Verifica AGENTS.md en la raíz que declara dev-standards (RULES.md §5.11)."""
+    p = project_path / "AGENTS.md"
+    if not p.is_file():
+        return False
+    return "dev-standards" in p.read_text(encoding="utf-8", errors="ignore")
+
+def check_graft(project_path: Path) -> bool:
+    """Verifica el wiring de Graft y que su caché graft/ no se versione (RULES.md §9)."""
+    wired = (project_path / ".claude" / "skills" / "graft" / "SKILL.md").is_file()
+    mcp = project_path / ".mcp.json"
+    if not wired and mcp.is_file():
+        try:
+            wired = "graft" in json.loads(mcp.read_text(encoding="utf-8")).get("mcpServers", {})
+        except Exception:
+            wired = False
+    if not wired:
+        return False
+    gi = project_path / ".gitignore"
+    if not gi.is_file():
+        return False
+    lines = {ln.strip() for ln in gi.read_text(encoding="utf-8", errors="ignore").splitlines()}
+    return bool(lines & {"/graft/", "graft/", "/graft"})
 
 def check_file_exists(project_path: Path, name: str) -> bool:
     return (project_path / name).exists()
@@ -223,8 +299,11 @@ def audit_project(project_path: Path) -> ProjectAudit:
     has_semver = check_semver(project_path, lang)
     has_changelog = check_changelog(project_path)
     readme_has_images = check_readme_images(project_path)
+    has_description = check_description(project_path)
     has_wiki = check_wiki(project_path)
     has_contexto = check_contexto(project_path)
+    has_graft = check_graft(project_path)
+    has_agents_md = check_agents_md(project_path)
     has_gitignore = check_file_exists(project_path, ".gitignore")
     has_dockerfile = check_file_exists(project_path, "Dockerfile")
     has_ci = check_ci(project_path)
@@ -237,8 +316,11 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_semver": 10,
         "has_changelog": 10,
         "readme_has_images": 5,
+        "has_description": 5,
         "has_wiki": 5,
         "has_contexto": 5,
+        "has_graft": 5,
+        "has_agents_md": 5,
         "has_gitignore": 5,
         "has_dockerfile": 5,
         "has_ci": 10,
@@ -259,8 +341,11 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_semver": has_semver,
         "has_changelog": has_changelog,
         "readme_has_images": readme_has_images,
+        "has_description": has_description,
         "has_wiki": has_wiki,
         "has_contexto": has_contexto,
+        "has_graft": has_graft,
+        "has_agents_md": has_agents_md,
         "has_gitignore": has_gitignore,
         "has_dockerfile": has_dockerfile,
         "has_ci": has_ci,
@@ -277,8 +362,11 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_semver=has_semver,
         has_changelog=has_changelog,
         readme_has_images=readme_has_images,
+        has_description=has_description,
         has_wiki=has_wiki,
         has_contexto=has_contexto,
+        has_graft=has_graft,
+        has_agents_md=has_agents_md,
         has_gitignore=has_gitignore,
         has_dockerfile=has_dockerfile,
         has_ci=has_ci,
@@ -320,8 +408,11 @@ def generate_report(audits: List[ProjectAudit], output_path: Path) -> None:
             ("SemVer", a.has_semver),
             ("CHANGELOG", a.has_changelog),
             ("README c/ imágenes", a.readme_has_images),
+            ("Descripción GitHub ≤350 (§5.8)", a.has_description),
             ("Wiki (wiki/ §5.9)", a.has_wiki),
             ("contexto_proyecto.md (§5.10)", a.has_contexto),
+            ("Graft (§9)", a.has_graft),
+            ("AGENTS.md (§5.11)", a.has_agents_md),
             (".gitignore", a.has_gitignore),
             ("Dockerfile", a.has_dockerfile),
             ("CI/CD", a.has_ci),

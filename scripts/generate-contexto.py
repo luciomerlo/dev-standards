@@ -38,6 +38,9 @@ EXCLUDE_DIRS = {
     "venv",
 }
 
+# Directorios excluidos solo en la raíz: caché local de Graft (RULES.md §9.3).
+ROOT_EXCLUDE_DIRS = {"graft"}
+
 # Salidas generadas: no se vuelcan (el propio contexto se excluye por ruta).
 ROOT_GENERATED = {"AUDIT_REPORT.md", "project_audit_summary.csv"}
 
@@ -222,6 +225,15 @@ def language_for(path: Path) -> str:
     return SUFFIX_LANG.get(path.suffix.lower(), "text")
 
 
+def submodule_paths(root: Path) -> set[str]:
+    """Rutas de submódulos declarados en .gitmodules: código externo, no se vuelca."""
+    gm = root / ".gitmodules"
+    if not gm.is_file():
+        return set()
+    txt = gm.read_text(encoding="utf-8", errors="ignore")
+    return {m.strip().strip("/") for m in re.findall(r"^\s*path\s*=\s*(.+)$", txt, re.MULTILINE)}
+
+
 def collect(
     root: Path, output: Path
 ) -> tuple[list[tuple[str, str]], list[str], list[str], list[str]]:
@@ -231,12 +243,18 @@ def collect(
     skipped_generated: list[str] = []
     skipped_other: list[str] = []
     output_resolved = output.resolve()
+    submodules = submodule_paths(root)
 
     for dirpath, dirnames, filenames in os.walk(root):
         current = Path(dirpath)
         kept: list[str] = []
         for dirname in sorted(dirnames):
-            if dirname in EXCLUDE_DIRS:
+            rel_dir = (current / dirname).relative_to(root).as_posix()
+            if (
+                dirname in EXCLUDE_DIRS
+                or (current == root and dirname in ROOT_EXCLUDE_DIRS)
+                or rel_dir in submodules
+            ):
                 skipped_dirs.append((current / dirname).relative_to(root).as_posix())
                 continue
             kept.append(dirname)
