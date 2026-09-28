@@ -19,7 +19,7 @@ bash /ruta/a/dev-standards/scripts/bootstrap-project.sh \
 
 `--lang` acepta `python`, `node`, `go` o `rust`. Sin `--name` usa el basename del directorio. `--dashboard` agrega `apple-design-skill` como submódulo fijado (§8.2).
 
-El script genera README, CHANGELOG, manifiesto con `0.1.0`, `.gitignore`, Dockerfile, CI, `.env.example`, `config.yaml`, `wiki/` con las cuatro páginas mínimas (§5.9), `contexto_proyecto.md` (§5.10) y `AGENTS.md` + `CLAUDE.md` con los estándares externos que aplican (§5.11).
+El script genera README, CHANGELOG, manifiesto con `0.1.0`, `.gitignore`, Dockerfile, CI, `.env.example`, `config.yaml`, `wiki/` con las cuatro páginas mínimas (§5.9), `contexto_proyecto.md` (§5.10) y `AGENTS.md` + `CLAUDE.md` con los estándares externos que aplican (§5.11) y el puntero al catálogo público de APIs (§10).
 
 Después del scaffold:
 
@@ -38,6 +38,8 @@ git clone --recurse-submodules https://github.com/luciomerlo/dev-standards.git
 # en un clon existente:
 git submodule update --init
 ```
+
+`--recurse-submodules` trae `apple-design-skill` (§8) y el catálogo `public-apis` (§10, [Knowledge](Knowledge.md)).
 
 El submódulo `.claude/skills/apple-design` es el skill de revisión de dashboards (§8). Sin inicializarlo, el resto del repo funciona igual.
 
@@ -60,7 +62,7 @@ No hace falta re-bootstrap si el árbol ya tiene manifiesto, CI y README. Falta 
 7. Instalar Graft (`npm install -g @nanonets/graft@0.19.0`), correr
    `graft init --agents claude --no-global` y versionar `.claude/`, `.mcp.json`,
    `.ignore` y `.gitignore` (§9).
-8. Crear `AGENTS.md` (y `CLAUDE.md` con `@AGENTS.md`) que declare dev-standards y liste los estándares externos que aplican. Si hay un dashboard, agregar `apple-design-skill` como submódulo en `.claude/skills/apple-design` (§5.11, §8.2, [Dashboards](Dashboards.md)).
+8. Crear `AGENTS.md` (y `CLAUDE.md` con `@AGENTS.md`) que declare dev-standards y liste los estándares externos que aplican. Si hay un dashboard, agregar `apple-design-skill` como submódulo en `.claude/skills/apple-design` (§5.11, §8.2, [Dashboards](Dashboards.md)). El catálogo de APIs públicas (§10) se consulta en dev-standards; no se copia a este repo.
 
 ## Añadir o cambiar un estándar
 

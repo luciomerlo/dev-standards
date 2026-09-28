@@ -8,8 +8,8 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 
 | Artefacto | Rol |
 |-----------|-----|
-| [AGENTS.md](../AGENTS.md) | Estándares externos, con sus versiones fijadas, que aplican los repos consumidores (§5.11) |
-| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§9) |
+| [AGENTS.md](../AGENTS.md) | Estándares externos, con sus versiones fijadas, y bases de conocimiento públicas (§5.11, §10) |
+| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§10) |
 | [docs/code-standards.md](../docs/code-standards.md) | Nomenclatura, lint, testing, review |
 | [docs/commit-conventions.md](../docs/commit-conventions.md) | Conventional Commits, branches, PRs |
 | `scripts/bootstrap-project.sh` | Scaffold obligatorio de un repo nuevo (§5.6) |
@@ -24,6 +24,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | `scripts/run_on_modal.py` | Cliente del backend `modal` (Modal, ~$30 USD/mes gratis) (§7.2) |
 | `config.yaml` | SSoT de configuración de dominio (§1.1) |
 | `.claude/skills/apple-design` | Submódulo fijado de `apple-design-skill`, el skill de revisión de dashboards (§8) |
+| `knowledge/public/public-apis` | Submódulo fijado de `public-apis`, catálogo de APIs HTTP públicas (§10) |
 | `wiki/` | Esta Wiki, versionada con el código (§5.9) |
 | `contexto_proyecto.md` | Resumen de arquitectura y contenido completo del código y la configuración (§5.10) |
 
@@ -37,6 +38,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | [Compute](Compute.md) | Cómputo local vs. web: los 5 backends (local/colab/cloud-api/cloud-serverless/modal) y cómo elegir uno por proyecto |
 | [Dashboards](Dashboards.md) | Estética y revisión de dashboards con `apple-design-skill` (Apple HIG), checklist e instalación (§8) |
 | [Graft](Graft.md) | Grafo de contexto del código para agentes: instalación, wiring, qué se versiona, uso y telemetría (§9) |
+| [Knowledge](Knowledge.md) | Bases de conocimiento públicas: catálogo `public-apis` fijado por commit, cómo citarlo y cómo actualizar el pin (§10) |
 
 ## Regla de actualización
 

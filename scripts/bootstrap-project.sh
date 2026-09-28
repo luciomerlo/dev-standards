@@ -11,10 +11,11 @@ PROJECT_DESC=""
 HAS_DASHBOARD=0
 REPO_ROOT="$(pwd)"
 
-# Estándares externos fijados (RULES.md §8.1, §9.1)
+# Estándares externos fijados (RULES.md §8.1, §9.1) y base pública (§10.2)
 APPLE_DESIGN_URL="https://github.com/dickwu/apple-design-skill.git"
 APPLE_DESIGN_COMMIT="39ea3fbab3011e0798c076dbeabf4917001499da"
 GRAFT_VERSION="0.19.0"
+PUBLIC_APIS_COMMIT="7598f906a610c6d6ebf7adc2e72b6b5fccc7eba0"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -866,6 +867,7 @@ Este repositorio sigue [dev-standards](https://github.com/luciomerlo/dev-standar
 
 $DASHBOARD_LINE
 - **Graft (§9):** usar \`graft ask\` / \`graft callers\` antes de leer o cambiar código. El wiring se versiona en \`.claude/\` y \`.mcp.json\`; \`graft/\` no se versiona.
+- **APIs públicas (§10):** antes de elegir una API HTTP pública, consultar el catálogo fijado en dev-standards (\`knowledge/public/public-apis\`, commit \`${PUBLIC_APIS_COMMIT:0:7}\`). No se copia a este repo.
 - **Rendimiento (§3.4):** con interfaz web, sugerir \`/fix\` al cerrar el desarrollo inicial, antes del primer release.
 - **Contexto (§5.10) y Wiki (§5.9):** regenerar \`contexto_proyecto.md\` y actualizar \`wiki/\` en el mismo cambio que altere código, uso o arquitectura.
 - **Secretos (§6):** nunca versionar credenciales; se inyectan solo por entorno.

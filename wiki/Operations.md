@@ -36,6 +36,10 @@ python scripts/generate-contexto.py
 
 `check_agents_md()` exige un `AGENTS.md` en la raíz que mencione `dev-standards`. No verifica que el submódulo de `apple-design-skill` exista, porque el auditor no puede saber si el repo tiene un dashboard; esa parte se revisa en el PR.
 
+### Bases de conocimiento públicas (§10)
+
+No hay check. El catálogo `public-apis` vive una sola vez, como submódulo de este repo. Copiarlo a cada proyecto hermano no es el estándar; el pin se revisa en el PR que lo cambia. Ver [Knowledge](Knowledge.md).
+
 ### Check de Graft (§9)
 
 `check_graft()` exige `.claude/skills/graft/SKILL.md` o una entrada `graft` en `mcpServers` de `.mcp.json`, y `/graft/` en `.gitignore` para que el caché no se versione. No valida la versión instalada ni que el grafo esté actualizado; para eso, `graft check` en local.

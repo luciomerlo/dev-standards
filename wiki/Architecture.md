@@ -32,6 +32,7 @@ graph TD
 - **Una sola configuración de dominio.** `config.yaml` es el SSoT de parámetros; no se copian listas ni taxonomías entre módulos (§1.1).
 - **Secretos: nunca en el árbol, siempre escaneados.** `scripts/check-secrets.py` corre en pre-commit y en CI (árbol + historial completo); un falso positivo se descarta con `# allowlist-secret`, nunca deshabilitando el chequeo (§6).
 - **Cómputo: local nunca se elimina, lo remoto se suma.** Todo proyecto con carga GPU opcional detecta CUDA en runtime y ofrece hasta 4 backends remotos según su tier de peso (`colab`/`cloud-api`/`cloud-serverless`/`modal`), pero `local` sigue siendo una opción disponible siempre — ver [Compute](Compute.md) (§7).
+- **Catálogos públicos se fijan, no se copian.** Una base de conocimiento pública (RULES.md §10) es un submódulo bajo `knowledge/public/`. El pin vive en este repo; los repos consumidores la consultan y citan una entrada. Ver [Knowledge](Knowledge.md).
 
 ## Mapa de RULES.md
 
@@ -46,3 +47,4 @@ graph TD
 | §7 | Detección de CUDA, los 5 backends de cómputo, selección de UI/CLI, exclusión de modelos de difusión, implementación de referencia |
 | §8 | Estética de dashboards: `apple-design-skill` (Apple HIG) fijado por commit, revisión obligatoria en PR, mínimos de contraste/tamaño/color/gráficos, anti-plantilla, tokens |
 | §9 | Graft: grafo de contexto para agentes fijado a `0.19.0`, wiring versionado, `graft/` como caché, capa LLM opcional, telemetría deshabilitada |
+| §10 | Bases de conocimiento públicas: catálogos de terceros como submódulos fijados en `knowledge/public/`, consultados y no copiados. Primera entrada: `public-apis` |

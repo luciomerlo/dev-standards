@@ -8,7 +8,7 @@
   - Frameworks y plataforma: Docker, GitHub Actions, pre-commit, commitlint, config.yaml como fuente única de configuración.
   - Dependencias principales: pytest>=7.4, ruff>=0.1, mypy>=1.5, pre-commit>=3.3.
 
-- Árbol de directorios y archivos relevantes (51 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
+- Árbol de directorios y archivos relevantes (53 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
 
 ```text
 .
@@ -26,6 +26,9 @@
 ├── docs/
 │   ├── code-standards.md
 │   └── commit-conventions.md
+├── knowledge/
+│   └── public/
+│       └── README.md
 ├── scripts/
 │   ├── audit-standards.py
 │   ├── bootstrap-project.sh
@@ -44,6 +47,7 @@
 │   ├── Getting-Started.md
 │   ├── Graft.md
 │   ├── Home.md
+│   ├── Knowledge.md
 │   ├── Operations.md
 │   └── _Sidebar.md
 ├── .continueignore
@@ -74,7 +78,7 @@
 └── test.py
 ```
 
-- Fuera del volcado de contenido: carpetas `.git`, `.mypy_cache`, `.ruff_cache`, `graft`, `.claude/skills/apple-design`, `scripts/__pycache__`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `.gitmodules`, `.ignore`, `LICENSE`.
+- Fuera del volcado de contenido: carpetas `.git`, `.claude/skills/apple-design`, `knowledge/public/public-apis`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `.gitmodules`, `.ignore`, `LICENSE`.
 
 # ARCHIVOS DEL PROYECTO
 
@@ -905,12 +909,22 @@ Este repositorio es la base de conocimiento de ingeniería del ecosistema. La fu
 | [`trailhq/Graft`](https://github.com/trailhq/Graft) (`@nanonets/graft`) | §9 | Todo repo con código fuente | `0.19.0` | `npm install -g @nanonets/graft@0.19.0 && graft init --agents claude --no-global` |
 | Skill `/fix` | §3.4 | Repos con interfaz web | — | Se corre al cerrar el desarrollo inicial, antes del primer release |
 
-Cambiar una versión fijada es un cambio explícito en este repo: actualizar esta tabla, la regla correspondiente de RULES.md, las constantes de `scripts/bootstrap-project.sh` (`APPLE_DESIGN_COMMIT`, `GRAFT_VERSION`) y el CHANGELOG, todo en el mismo cambio.
+Cambiar una versión fijada es un cambio explícito en este repo: actualizar esta tabla, la regla correspondiente de RULES.md, las constantes de `scripts/bootstrap-project.sh` (`APPLE_DESIGN_COMMIT`, `GRAFT_VERSION`, `PUBLIC_APIS_COMMIT`) y el CHANGELOG, todo en el mismo cambio.
+
+## Bases de conocimiento públicas
+
+Catálogos de referencia, no estándares. Un agente los consulta cuando el trabajo lo pide. Viven solo en este repo, como submódulos fijados bajo `knowledge/public/`. No se copian a los repos consumidores. `generate-contexto.py` no vuelca su contenido.
+
+| Base | Regla | Para qué | Versión fijada | Dónde está |
+|------|-------|----------|----------------|------------|
+| [`public-apis/public-apis`](https://github.com/public-apis/public-apis) | §10 | Elegir una API HTTP pública | commit `7598f906a610c6d6ebf7adc2e72b6b5fccc7eba0` | `knowledge/public/public-apis` |
+
+Actualizar un pin es un cambio explícito: esta tabla, RULES.md §10, `PUBLIC_APIS_COMMIT` en `scripts/bootstrap-project.sh` y el CHANGELOG, en el mismo cambio.
 
 ## Qué hacer como agente
 
-- **Trabajando en un repo consumidor:** leer su `AGENTS.md` (§5.11) y aplicar los estándares de la tabla que correspondan. Si el repo tiene un dashboard y no tiene `.claude/skills/apple-design`, proponer instalarlo en el mismo cambio. Todo PR que toque un dashboard lleva la revisión de `/apple-design`, y sus hallazgos Critical bloquean el merge.
-- **Trabajando en dev-standards:** este repo aplica sus propios estándares. `apple-design-skill` está como submódulo en `.claude/skills/apple-design` (clonar con `--recurse-submodules`) y Graft está conectado (`graft ask` antes de leer código). Todo cambio de reglas actualiza `wiki/`, `CHANGELOG.md` y `contexto_proyecto.md` en el mismo commit.
+- **Trabajando en un repo consumidor:** leer su `AGENTS.md` (§5.11) y aplicar los estándares de la tabla que correspondan. Si el repo tiene un dashboard y no tiene `.claude/skills/apple-design`, proponer instalarlo en el mismo cambio. Todo PR que toque un dashboard lleva la revisión de `/apple-design`, y sus hallazgos Critical bloquean el merge. Antes de proponer una API HTTP pública, consultar el catálogo de §10 en este repo (`knowledge/public/public-apis/README.md`) y citar la entrada elegida.
+- **Trabajando en dev-standards:** este repo aplica sus propios estándares. `apple-design-skill` está como submódulo en `.claude/skills/apple-design` y `public-apis` en `knowledge/public/public-apis` (clonar con `--recurse-submodules`). Graft está conectado (`graft ask` antes de leer código). Todo cambio de reglas actualiza `wiki/`, `CHANGELOG.md` y `contexto_proyecto.md` en el mismo commit.
 ```
 
 ## Ruta: `another_test.txt`
@@ -15936,6 +15950,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Line-length, naming and typing fixes only, no behavior change.
 
 ### Added
+- RULES.md §10: public knowledge bases live in this repo as pinned submodules under
+  `knowledge/public/` and are not copied into consuming repos. First entry:
+  [`public-apis/public-apis`](https://github.com/public-apis/public-apis) (MIT) at
+  `knowledge/public/public-apis`, pinned to `7598f906`. Agents cite a catalog entry
+  before proposing a public HTTP API. `bootstrap-project.sh` records `PUBLIC_APIS_COMMIT`
+  and points new `AGENTS.md` files at that pin. Wiki page `wiki/Knowledge.md`.
 - RULES.md §5.11: repositories that use dev-standards as a knowledge base carry an `AGENTS.md` (plus
   `CLAUDE.md` importing it) that declares dev-standards and lists the external standards to apply
   (`apple-design-skill` §8, Graft §9, `/fix` §3.4). §8.2 now states that the apple-design obligation
@@ -17241,6 +17261,26 @@ Solo falta instalar el LSP server del lenguaje de cada proyecto — `mcp__plugin
 5. Verificar `lsp_goto_definition` / `lsp_diagnostics` funcionando en archivo real del proyecto.
 ```
 
+## Ruta: `knowledge/public/README.md`
+
+````markdown
+# Bases de conocimiento públicas
+
+Catálogos externos de referencia (RULES.md §10). Cada uno es un submódulo fijado: este árbol guarda el commit, no una copia que se edita a mano. No son estándares obligatorios y no se copian a los repos consumidores.
+
+| Base | Ruta | Upstream | Pin | Licencia | Cuándo consultarla |
+|------|------|----------|-----|----------|--------------------|
+| Public APIs | [`public-apis/`](public-apis/README.md) | [public-apis/public-apis](https://github.com/public-apis/public-apis) | `7598f906a610c6d6ebf7adc2e72b6b5fccc7eba0` | MIT | Al elegir una API HTTP pública |
+
+Clonar con `git clone --recurse-submodules`. En un clon ya existente:
+
+```bash
+git submodule update --init knowledge/public/public-apis
+```
+
+`scripts/generate-contexto.py` excluye estas rutas (están en `.gitmodules`) y no vuelca el catálogo en `contexto_proyecto.md`.
+````
+
 ## Ruta: `PENDIENTES.md`
 
 ````markdown
@@ -17324,8 +17364,8 @@ graph TD
 
 | Archivo / carpeta | Rol |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) | Instrucciones para agentes y **lista canónica de estándares externos** que aplican los repos consumidores: `apple-design-skill` (§8), Graft (§9), `/fix` (§3.4) |
-| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7), estética de dashboards con Apple HIG (§8), grafo de contexto Graft (§9) |
+| [`AGENTS.md`](AGENTS.md) | Instrucciones para agentes, **lista canónica de estándares externos** (`apple-design-skill` §8, Graft §9, `/fix` §3.4) y bases de conocimiento públicas (§10) |
+| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7), estética de dashboards con Apple HIG (§8), grafo de contexto Graft (§9), bases de conocimiento públicas (§10) |
 | [`contexto_proyecto.md`](contexto_proyecto.md) | Base de código consolidada para un LLM posterior (§5.10). Regenerar con `scripts/generate-contexto.py` |
 | [`docs/code-standards.md`](docs/code-standards.md) | Nomenclatura, formato, testing, checklist de revisión |
 | [`docs/commit-conventions.md`](docs/commit-conventions.md) | Convenciones de commits |
@@ -17340,6 +17380,7 @@ graph TD
 | `scripts/transcribe_via_groq.py` | Cliente del backend `cloud-api` para proyectos basados en Whisper (Groq) |
 | `scripts/run_on_hf_inference.py` | Cliente del backend `cloud-api` para otros modelos hospedados en HF |
 | `.claude/skills/apple-design` | Submódulo fijado de [`apple-design-skill`](https://github.com/dickwu/apple-design-skill), el estándar de dashboards (§8). Clonar con `--recurse-submodules` |
+| `knowledge/public/public-apis` | Submódulo fijado de [`public-apis/public-apis`](https://github.com/public-apis/public-apis), catálogo de APIs HTTP públicas (§10). Clonar con `--recurse-submodules` |
 | [`wiki/`](wiki/Home.md) | Wiki operativa de este propio repo (onboarding, arquitectura, runbook) |
 
 ## Uso rápido
@@ -17386,6 +17427,7 @@ Copie `.env.example` a `.env` si va a correr los scripts con credenciales (ej. t
 | Wiki (`wiki/`, §5.9) | ✅ |
 | Contexto LLM (`contexto_proyecto.md`, §5.10) | ✅ |
 | Escaneo de secretos (§6) | ✅ |
+| Base de conocimiento pública (`public-apis`, §10) | ✅ |
 
 ## Documentación
 
@@ -17457,7 +17499,7 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
 *   **5.8. Descripción del Repositorio:** Todo repositorio debe tener una descripción (campo "description" del hosting, ej. GitHub), en inglés, de máximo 350 caracteres. Debe crearse al crear `README.md` y actualizarse cada vez que `README.md` cambie, manteniéndola alineada con el propósito vigente del proyecto.
 *   **5.9. Wiki del Repositorio:** Todo repositorio debe tener su propia Wiki, versionada en el directorio `wiki/` (Markdown compatible con GitHub Wiki). Debe crearse junto al `README.md` (bootstrap §5.6) y actualizarse en el **mismo cambio** que altere propósito, arquitectura, uso, operación o forma de contribuir. El `README.md` es la puerta de entrada; la Wiki es el conocimiento operativo vivo (onboarding, arquitectura, runbook, troubleshooting) y no puede quedar en plantillas vacías ni desactualizada respecto al código. Páginas mínimas obligatorias: `Home.md` (índice y propósito), `Architecture.md`, `Getting-Started.md`, `Operations.md`. El README debe enlazar a `wiki/Home.md`. Publicar esas páginas al Wiki tab de GitHub (`<repo>.wiki.git`) es opcional; `wiki/` en el árbol del repo es la fuente de verdad.
 *   **5.10. Contexto consolidado del proyecto (`contexto_proyecto.md`):** Tan pronto como sea posible debe existir, en la raíz, un único archivo `contexto_proyecto.md` optimizado para que un motor de LLM posterior entienda la base de código completa. En un repositorio nuevo se genera al cerrar el scaffolding (§5.6); en uno existente, en el primer cambio que toque el árbol. Se regenera en el **mismo cambio** que altere código, configuración o documentación normativa (`python scripts/generate-contexto.py`), de modo que se mantenga actualizado. La implementación de referencia es `scripts/generate-contexto.py`; el bootstrap la copia y la ejecuta. Estructura estricta: (1) `# RESUMEN Y ARQUITECTURA`, con el propósito general, el stack tecnológico (lenguajes, frameworks y dependencias principales) y un árbol de directorios y archivos relevantes, excluyendo carpetas de build, binarios y dependencias (`node_modules`, `bin`, `obj`, `.git`, `venv`, `.venv`, `dist`, `build`, `target`, `__pycache__` y equivalentes); (2) `# ARCHIVOS DEL PROYECTO`, y por cada archivo de código o configuración relevante un apartado `## Ruta:` con la ruta relativa (por ejemplo `camino/al/archivo.ext`) seguido de un bloque con el lenguaje y el **contenido completo**, sin omisiones. Los Markdown versionados que definen el sistema (README, CHANGELOG, reglas, `docs/`, `wiki/` y demás `.md` de producto) entran en ese volcado. No se incluye el propio `contexto_proyecto.md` ni salidas generadas de auditoría (`AUDIT_REPORT.md` y resúmenes CSV); esos artefactos pueden nombrarse en el árbol como excluidos.
-*   **5.11. Instrucciones para Agentes (`AGENTS.md`):** Todo repositorio que use dev-standards como base de conocimiento tiene en la raíz un `AGENTS.md` que lo declara y enlaza `RULES.md`, y lista los estándares externos que los agentes deben aplicar: `apple-design-skill` para dashboards (§8), Graft (§9) y `/fix` (§3.4). Incluye además un `CLAUDE.md` que lo importa (`@AGENTS.md`). El bootstrap (§5.6) genera ambos, y `audit-standards.py` verifica que `AGENTS.md` exista y referencie dev-standards. La lista canónica de estándares externos, con sus versiones fijadas, está en el `AGENTS.md` de este repositorio.
+*   **5.11. Instrucciones para Agentes (`AGENTS.md`):** Todo repositorio que use dev-standards como base de conocimiento tiene en la raíz un `AGENTS.md` que lo declara y enlaza `RULES.md`, y lista los estándares externos que los agentes deben aplicar: `apple-design-skill` para dashboards (§8), Graft (§9) y `/fix` (§3.4). Incluye además un `CLAUDE.md` que lo importa (`@AGENTS.md`). El bootstrap (§5.6) genera ambos, y `audit-standards.py` verifica que `AGENTS.md` exista y referencie dev-standards. La lista canónica de estándares externos, con sus versiones fijadas, está en el `AGENTS.md` de este repositorio, junto con las bases de conocimiento públicas (§10).
 
 ---
 
@@ -17515,6 +17557,13 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
 *   **9.5. Telemetría Deshabilitada:** Graft envía estadísticas anónimas de uso a un tercero. En todas las máquinas del ecosistema se deshabilita con `graft telemetry disable` y/o `DO_NOT_TRACK=1`. En CI ya viene deshabilitada.
 *   **9.6. Uso en PRs (recomendado):** Todo PR que modifique código puede adjuntar el radio de impacto con `graft blast --base origin/main --format markdown`, que lista las áreas que dependen de las líneas tocadas, para orientar la revisión y los tests.
 *   **9.7. Complementariedad:** Graft no reemplaza a `contexto_proyecto.md` (§5.10) ni a la Wiki (§5.9). El contexto consolidado es un volcado estático y portable a cualquier LLM; Graft es un índice vivo, consultable por el agente durante la sesión. Ambos se mantienen.
+
+---
+
+## 10. Bases de conocimiento públicas
+
+*   **10.1. Qué son:** Una base de conocimiento pública es un catálogo externo de referencia, mantenido por terceros, que un agente consulta cuando el trabajo lo pide. No es un estándar obligatorio y no se copia a los repositorios consumidores. Vive en este repositorio como submódulo fijado bajo `knowledge/public/`. El submódulo versiona solo el commit; `generate-contexto.py` no vuelca su contenido (§5.10, igual que §8.2). La lista canónica, con el pin, está en `AGENTS.md`. Actualizar un pin es un cambio explícito en `AGENTS.md`, en esta sección, en `scripts/bootstrap-project.sh` y en el CHANGELOG.
+*   **10.2. Public APIs:** [`public-apis/public-apis`](https://github.com/public-apis/public-apis) (MIT) está fijado al commit `7598f906a610c6d6ebf7adc2e72b6b5fccc7eba0` (2026-09-28) en `knowledge/public/public-apis`. Antes de proponer una API HTTP pública, el agente consulta el `README.md` de ese submódulo y cita la entrada que elige: nombre, enlace, autenticación y HTTPS. Si ninguna entrada cubre el caso, lo dice y no inventa una fila del catálogo.
 ```
 
 ## Ruta: `scripts/audit-standards.py`
@@ -18140,10 +18189,11 @@ PROJECT_DESC=""
 HAS_DASHBOARD=0
 REPO_ROOT="$(pwd)"
 
-# Estándares externos fijados (RULES.md §8.1, §9.1)
+# Estándares externos fijados (RULES.md §8.1, §9.1) y base pública (§10.2)
 APPLE_DESIGN_URL="https://github.com/dickwu/apple-design-skill.git"
 APPLE_DESIGN_COMMIT="39ea3fbab3011e0798c076dbeabf4917001499da"
 GRAFT_VERSION="0.19.0"
+PUBLIC_APIS_COMMIT="7598f906a610c6d6ebf7adc2e72b6b5fccc7eba0"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -18995,6 +19045,7 @@ Este repositorio sigue [dev-standards](https://github.com/luciomerlo/dev-standar
 
 $DASHBOARD_LINE
 - **Graft (§9):** usar \`graft ask\` / \`graft callers\` antes de leer o cambiar código. El wiring se versiona en \`.claude/\` y \`.mcp.json\`; \`graft/\` no se versiona.
+- **APIs públicas (§10):** antes de elegir una API HTTP pública, consultar el catálogo fijado en dev-standards (\`knowledge/public/public-apis\`, commit \`${PUBLIC_APIS_COMMIT:0:7}\`). No se copia a este repo.
 - **Rendimiento (§3.4):** con interfaz web, sugerir \`/fix\` al cerrar el desarrollo inicial, antes del primer release.
 - **Contexto (§5.10) y Wiki (§5.9):** regenerar \`contexto_proyecto.md\` y actualizar \`wiki/\` en el mismo cambio que altere código, uso o arquitectura.
 - **Secretos (§6):** nunca versionar credenciales; se inyectan solo por entorno.
@@ -20653,6 +20704,7 @@ if __name__ == "__main__":
 * [Compute](Compute)
 * [Dashboards](Dashboards)
 * [Graft](Graft)
+* [Knowledge](Knowledge)
 * [RULES.md](../RULES.md)
 * [README](../README.md)
 * [CHANGELOG](../CHANGELOG.md)
@@ -20695,6 +20747,7 @@ graph TD
 - **Una sola configuración de dominio.** `config.yaml` es el SSoT de parámetros; no se copian listas ni taxonomías entre módulos (§1.1).
 - **Secretos: nunca en el árbol, siempre escaneados.** `scripts/check-secrets.py` corre en pre-commit y en CI (árbol + historial completo); un falso positivo se descarta con `# allowlist-secret`, nunca deshabilitando el chequeo (§6).
 - **Cómputo: local nunca se elimina, lo remoto se suma.** Todo proyecto con carga GPU opcional detecta CUDA en runtime y ofrece hasta 4 backends remotos según su tier de peso (`colab`/`cloud-api`/`cloud-serverless`/`modal`), pero `local` sigue siendo una opción disponible siempre — ver [Compute](Compute.md) (§7).
+- **Catálogos públicos se fijan, no se copian.** Una base de conocimiento pública (RULES.md §10) es un submódulo bajo `knowledge/public/`. El pin vive en este repo; los repos consumidores la consultan y citan una entrada. Ver [Knowledge](Knowledge.md).
 
 ## Mapa de RULES.md
 
@@ -20709,6 +20762,7 @@ graph TD
 | §7 | Detección de CUDA, los 5 backends de cómputo, selección de UI/CLI, exclusión de modelos de difusión, implementación de referencia |
 | §8 | Estética de dashboards: `apple-design-skill` (Apple HIG) fijado por commit, revisión obligatoria en PR, mínimos de contraste/tamaño/color/gráficos, anti-plantilla, tokens |
 | §9 | Graft: grafo de contexto para agentes fijado a `0.19.0`, wiring versionado, `graft/` como caché, capa LLM opcional, telemetría deshabilitada |
+| §10 | Bases de conocimiento públicas: catálogos de terceros como submódulos fijados en `knowledge/public/`, consultados y no copiados. Primera entrada: `public-apis` |
 ````
 
 ## Ruta: `wiki/Compute.md`
@@ -20947,7 +21001,7 @@ bash /ruta/a/dev-standards/scripts/bootstrap-project.sh \
 
 `--lang` acepta `python`, `node`, `go` o `rust`. Sin `--name` usa el basename del directorio. `--dashboard` agrega `apple-design-skill` como submódulo fijado (§8.2).
 
-El script genera README, CHANGELOG, manifiesto con `0.1.0`, `.gitignore`, Dockerfile, CI, `.env.example`, `config.yaml`, `wiki/` con las cuatro páginas mínimas (§5.9), `contexto_proyecto.md` (§5.10) y `AGENTS.md` + `CLAUDE.md` con los estándares externos que aplican (§5.11).
+El script genera README, CHANGELOG, manifiesto con `0.1.0`, `.gitignore`, Dockerfile, CI, `.env.example`, `config.yaml`, `wiki/` con las cuatro páginas mínimas (§5.9), `contexto_proyecto.md` (§5.10) y `AGENTS.md` + `CLAUDE.md` con los estándares externos que aplican (§5.11) y el puntero al catálogo público de APIs (§10).
 
 Después del scaffold:
 
@@ -20966,6 +21020,8 @@ git clone --recurse-submodules https://github.com/luciomerlo/dev-standards.git
 # en un clon existente:
 git submodule update --init
 ```
+
+`--recurse-submodules` trae `apple-design-skill` (§8) y el catálogo `public-apis` (§10, [Knowledge](Knowledge.md)).
 
 El submódulo `.claude/skills/apple-design` es el skill de revisión de dashboards (§8). Sin inicializarlo, el resto del repo funciona igual.
 
@@ -20988,7 +21044,7 @@ No hace falta re-bootstrap si el árbol ya tiene manifiesto, CI y README. Falta 
 7. Instalar Graft (`npm install -g @nanonets/graft@0.19.0`), correr
    `graft init --agents claude --no-global` y versionar `.claude/`, `.mcp.json`,
    `.ignore` y `.gitignore` (§9).
-8. Crear `AGENTS.md` (y `CLAUDE.md` con `@AGENTS.md`) que declare dev-standards y liste los estándares externos que aplican. Si hay un dashboard, agregar `apple-design-skill` como submódulo en `.claude/skills/apple-design` (§5.11, §8.2, [Dashboards](Dashboards.md)).
+8. Crear `AGENTS.md` (y `CLAUDE.md` con `@AGENTS.md`) que declare dev-standards y liste los estándares externos que aplican. Si hay un dashboard, agregar `apple-design-skill` como submódulo en `.claude/skills/apple-design` (§5.11, §8.2, [Dashboards](Dashboards.md)). El catálogo de APIs públicas (§10) se consulta en dev-standards; no se copia a este repo.
 
 ## Añadir o cambiar un estándar
 
@@ -21081,8 +21137,8 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 
 | Artefacto | Rol |
 |-----------|-----|
-| [AGENTS.md](../AGENTS.md) | Estándares externos, con sus versiones fijadas, que aplican los repos consumidores (§5.11) |
-| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§9) |
+| [AGENTS.md](../AGENTS.md) | Estándares externos, con sus versiones fijadas, y bases de conocimiento públicas (§5.11, §10) |
+| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§10) |
 | [docs/code-standards.md](../docs/code-standards.md) | Nomenclatura, lint, testing, review |
 | [docs/commit-conventions.md](../docs/commit-conventions.md) | Conventional Commits, branches, PRs |
 | `scripts/bootstrap-project.sh` | Scaffold obligatorio de un repo nuevo (§5.6) |
@@ -21097,6 +21153,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | `scripts/run_on_modal.py` | Cliente del backend `modal` (Modal, ~$30 USD/mes gratis) (§7.2) |
 | `config.yaml` | SSoT de configuración de dominio (§1.1) |
 | `.claude/skills/apple-design` | Submódulo fijado de `apple-design-skill`, el skill de revisión de dashboards (§8) |
+| `knowledge/public/public-apis` | Submódulo fijado de `public-apis`, catálogo de APIs HTTP públicas (§10) |
 | `wiki/` | Esta Wiki, versionada con el código (§5.9) |
 | `contexto_proyecto.md` | Resumen de arquitectura y contenido completo del código y la configuración (§5.10) |
 
@@ -21110,10 +21167,41 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | [Compute](Compute.md) | Cómputo local vs. web: los 5 backends (local/colab/cloud-api/cloud-serverless/modal) y cómo elegir uno por proyecto |
 | [Dashboards](Dashboards.md) | Estética y revisión de dashboards con `apple-design-skill` (Apple HIG), checklist e instalación (§8) |
 | [Graft](Graft.md) | Grafo de contexto del código para agentes: instalación, wiring, qué se versiona, uso y telemetría (§9) |
+| [Knowledge](Knowledge.md) | Bases de conocimiento públicas: catálogo `public-apis` fijado por commit, cómo citarlo y cómo actualizar el pin (§10) |
 
 ## Regla de actualización
 
 Cualquier cambio que altere propósito, arquitectura, uso, operación o forma de contribuir **actualiza esta Wiki en el mismo cambio** (RULES.md §5.9). Plantillas vacías no cumplen el estándar.
+```
+
+## Ruta: `wiki/Knowledge.md`
+
+```markdown
+# Knowledge — bases de conocimiento públicas
+
+Catálogos de referencia según RULES.md §10. No son estándares: un agente los consulta cuando el trabajo lo pide, y cita la entrada que usa.
+
+## Public APIs
+
+[`public-apis/public-apis`](https://github.com/public-apis/public-apis) (MIT) está fijado al commit `7598f906a610c6d6ebf7adc2e72b6b5fccc7eba0` (2026-09-28) en `knowledge/public/public-apis`. El catálogo es el `README.md` de ese submódulo: APIs HTTP públicas por categoría, con autenticación, HTTPS y CORS.
+
+Antes de proponer una API HTTP pública:
+
+1. Abrir `knowledge/public/public-apis/README.md` (hace falta `git clone --recurse-submodules` o `git submodule update --init`).
+2. Citar la entrada elegida: nombre, enlace, autenticación y HTTPS.
+3. Si ninguna entrada cubre el caso, decirlo. No inventar una fila del catálogo.
+
+El catálogo vive solo en este repositorio. Los repos consumidores no lo copian: su `AGENTS.md`, generado por `bootstrap-project.sh`, apunta al pin de dev-standards.
+
+## Qué no hace el auditor
+
+No hay check en `scripts/audit-standards.py`. El catálogo no es un requisito de cada repo hermano; exigirlo duplicaría un árbol de terceros en todos los proyectos. El pin se revisa en el PR que lo cambia.
+
+## Actualizar el pin
+
+1. `git submodule update --remote knowledge/public/public-apis` y revisar el diff del catálogo.
+2. Anotar el commit nuevo en `AGENTS.md`, RULES.md §10.2 y `PUBLIC_APIS_COMMIT` de `scripts/bootstrap-project.sh`.
+3. Registrar el cambio en `CHANGELOG.md` y regenerar `contexto_proyecto.md`.
 ```
 
 ## Ruta: `wiki/Operations.md`
@@ -21156,6 +21244,10 @@ python scripts/generate-contexto.py
 ### Check de AGENTS.md (§5.11)
 
 `check_agents_md()` exige un `AGENTS.md` en la raíz que mencione `dev-standards`. No verifica que el submódulo de `apple-design-skill` exista, porque el auditor no puede saber si el repo tiene un dashboard; esa parte se revisa en el PR.
+
+### Bases de conocimiento públicas (§10)
+
+No hay check. El catálogo `public-apis` vive una sola vez, como submódulo de este repo. Copiarlo a cada proyecto hermano no es el estándar; el pin se revisa en el PR que lo cambia. Ver [Knowledge](Knowledge.md).
 
 ### Check de Graft (§9)
 

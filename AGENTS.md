@@ -10,9 +10,19 @@ Este repositorio es la base de conocimiento de ingeniería del ecosistema. La fu
 | [`trailhq/Graft`](https://github.com/trailhq/Graft) (`@nanonets/graft`) | §9 | Todo repo con código fuente | `0.19.0` | `npm install -g @nanonets/graft@0.19.0 && graft init --agents claude --no-global` |
 | Skill `/fix` | §3.4 | Repos con interfaz web | — | Se corre al cerrar el desarrollo inicial, antes del primer release |
 
-Cambiar una versión fijada es un cambio explícito en este repo: actualizar esta tabla, la regla correspondiente de RULES.md, las constantes de `scripts/bootstrap-project.sh` (`APPLE_DESIGN_COMMIT`, `GRAFT_VERSION`) y el CHANGELOG, todo en el mismo cambio.
+Cambiar una versión fijada es un cambio explícito en este repo: actualizar esta tabla, la regla correspondiente de RULES.md, las constantes de `scripts/bootstrap-project.sh` (`APPLE_DESIGN_COMMIT`, `GRAFT_VERSION`, `PUBLIC_APIS_COMMIT`) y el CHANGELOG, todo en el mismo cambio.
+
+## Bases de conocimiento públicas
+
+Catálogos de referencia, no estándares. Un agente los consulta cuando el trabajo lo pide. Viven solo en este repo, como submódulos fijados bajo `knowledge/public/`. No se copian a los repos consumidores. `generate-contexto.py` no vuelca su contenido.
+
+| Base | Regla | Para qué | Versión fijada | Dónde está |
+|------|-------|----------|----------------|------------|
+| [`public-apis/public-apis`](https://github.com/public-apis/public-apis) | §10 | Elegir una API HTTP pública | commit `7598f906a610c6d6ebf7adc2e72b6b5fccc7eba0` | `knowledge/public/public-apis` |
+
+Actualizar un pin es un cambio explícito: esta tabla, RULES.md §10, `PUBLIC_APIS_COMMIT` en `scripts/bootstrap-project.sh` y el CHANGELOG, en el mismo cambio.
 
 ## Qué hacer como agente
 
-- **Trabajando en un repo consumidor:** leer su `AGENTS.md` (§5.11) y aplicar los estándares de la tabla que correspondan. Si el repo tiene un dashboard y no tiene `.claude/skills/apple-design`, proponer instalarlo en el mismo cambio. Todo PR que toque un dashboard lleva la revisión de `/apple-design`, y sus hallazgos Critical bloquean el merge.
-- **Trabajando en dev-standards:** este repo aplica sus propios estándares. `apple-design-skill` está como submódulo en `.claude/skills/apple-design` (clonar con `--recurse-submodules`) y Graft está conectado (`graft ask` antes de leer código). Todo cambio de reglas actualiza `wiki/`, `CHANGELOG.md` y `contexto_proyecto.md` en el mismo commit.
+- **Trabajando en un repo consumidor:** leer su `AGENTS.md` (§5.11) y aplicar los estándares de la tabla que correspondan. Si el repo tiene un dashboard y no tiene `.claude/skills/apple-design`, proponer instalarlo en el mismo cambio. Todo PR que toque un dashboard lleva la revisión de `/apple-design`, y sus hallazgos Critical bloquean el merge. Antes de proponer una API HTTP pública, consultar el catálogo de §10 en este repo (`knowledge/public/public-apis/README.md`) y citar la entrada elegida.
+- **Trabajando en dev-standards:** este repo aplica sus propios estándares. `apple-design-skill` está como submódulo en `.claude/skills/apple-design` y `public-apis` en `knowledge/public/public-apis` (clonar con `--recurse-submodules`). Graft está conectado (`graft ask` antes de leer código). Todo cambio de reglas actualiza `wiki/`, `CHANGELOG.md` y `contexto_proyecto.md` en el mismo commit.

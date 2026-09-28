@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Line-length, naming and typing fixes only, no behavior change.
 
 ### Added
+- RULES.md §10: public knowledge bases live in this repo as pinned submodules under
+  `knowledge/public/` and are not copied into consuming repos. First entry:
+  [`public-apis/public-apis`](https://github.com/public-apis/public-apis) (MIT) at
+  `knowledge/public/public-apis`, pinned to `7598f906`. Agents cite a catalog entry
+  before proposing a public HTTP API. `bootstrap-project.sh` records `PUBLIC_APIS_COMMIT`
+  and points new `AGENTS.md` files at that pin. Wiki page `wiki/Knowledge.md`.
 - RULES.md §5.11: repositories that use dev-standards as a knowledge base carry an `AGENTS.md` (plus
   `CLAUDE.md` importing it) that declares dev-standards and lists the external standards to apply
   (`apple-design-skill` §8, Graft §9, `/fix` §3.4). §8.2 now states that the apple-design obligation
