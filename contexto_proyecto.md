@@ -8,7 +8,7 @@
   - Frameworks y plataforma: Docker, GitHub Actions, pre-commit, commitlint, config.yaml como fuente única de configuración.
   - Dependencias principales: pytest>=7.4, ruff>=0.1, mypy>=1.5, pre-commit>=3.3.
 
-- Árbol de directorios y archivos relevantes (53 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
+- Árbol de directorios y archivos relevantes (54 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
 
 ```text
 .
@@ -33,6 +33,7 @@
 │   ├── audit-standards.py
 │   ├── bootstrap-project.sh
 │   ├── check-secrets.py
+│   ├── find-public-api.py
 │   ├── generate-contexto.py
 │   ├── gpu_compute.py
 │   ├── make_colab_notebook.py
@@ -78,7 +79,7 @@
 └── test.py
 ```
 
-- Fuera del volcado de contenido: carpetas `.git`, `.claude/skills/apple-design`, `knowledge/public/public-apis`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `.gitmodules`, `.ignore`, `LICENSE`.
+- Fuera del volcado de contenido: carpetas `.git`, `.mypy_cache`, `.ruff_cache`, `graft`, `.claude/skills/apple-design`, `knowledge/public/public-apis`, `scripts/__pycache__`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `.gitmodules`, `.ignore`, `LICENSE`.
 
 # ARCHIVOS DEL PROYECTO
 
@@ -923,7 +924,7 @@ Actualizar un pin es un cambio explícito: esta tabla, RULES.md §10, `PUBLIC_AP
 
 ## Qué hacer como agente
 
-- **Trabajando en un repo consumidor:** leer su `AGENTS.md` (§5.11) y aplicar los estándares de la tabla que correspondan. Si el repo tiene un dashboard y no tiene `.claude/skills/apple-design`, proponer instalarlo en el mismo cambio. Todo PR que toque un dashboard lleva la revisión de `/apple-design`, y sus hallazgos Critical bloquean el merge. Antes de proponer una API HTTP pública, consultar el catálogo de §10 en este repo (`knowledge/public/public-apis/README.md`) y citar la entrada elegida.
+- **Trabajando en un repo consumidor:** leer su `AGENTS.md` (§5.11) y aplicar los estándares de la tabla que correspondan. Si el repo tiene un dashboard y no tiene `.claude/skills/apple-design`, proponer instalarlo en el mismo cambio. Todo PR que toque un dashboard lleva la revisión de `/apple-design`, y sus hallazgos Critical bloquean el merge. Antes de proponer una API HTTP pública, consultar el catálogo de §10 en este repo con `python scripts/find-public-api.py --category <cat> --https` (o `--query "<texto>"`) y citar la entrada elegida.
 - **Trabajando en dev-standards:** este repo aplica sus propios estándares. `apple-design-skill` está como submódulo en `.claude/skills/apple-design` y `public-apis` en `knowledge/public/public-apis` (clonar con `--recurse-submodules`). Graft está conectado (`graft ask` antes de leer código). Todo cambio de reglas actualiza `wiki/`, `CHANGELOG.md` y `contexto_proyecto.md` en el mismo commit.
 ```
 
@@ -15950,6 +15951,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Line-length, naming and typing fixes only, no behavior change.
 
 ### Added
+- `scripts/find-public-api.py`: searches the pinned `public-apis` catalog (RULES.md §10.2) by category,
+  text, auth, HTTPS and CORS, flags `utm_*` links as sponsored, and exits 1 on no match. §10.2, `AGENTS.md`
+  and `wiki/Knowledge.md` point agents to it instead of reading the ~2,000-row README.
 - RULES.md §10: public knowledge bases live in this repo as pinned submodules under
   `knowledge/public/` and are not copied into consuming repos. First entry:
   [`public-apis/public-apis`](https://github.com/public-apis/public-apis) (MIT) at
@@ -17371,6 +17375,7 @@ graph TD
 | [`docs/commit-conventions.md`](docs/commit-conventions.md) | Convenciones de commits |
 | `scripts/bootstrap-project.sh` | Genera el scaffolding completo en un repo nuevo (README, CHANGELOG, CI, `.gitignore`, Dockerfile, `wiki/`, guardarraíl de secretos) |
 | `scripts/audit-standards.py` | Audita repos existentes contra RULES.md y genera `AUDIT_REPORT.md` con score 0-100 |
+| `scripts/find-public-api.py` | Busca en el catálogo `public-apis` fijado por categoría, texto, auth, HTTPS y CORS (RULES.md §10.2) |
 | `scripts/generate-contexto.py` | Regenera `contexto_proyecto.md` (RULES.md §5.10) |
 | `scripts/check-secrets.py` | Bloquea commits/CI con credenciales hardcodeadas (RULES.md §6) |
 | `scripts/gpu_compute.py` | Detección de CUDA + selección de backend de cómputo (RULES.md §7) |
@@ -17563,7 +17568,7 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
 ## 10. Bases de conocimiento públicas
 
 *   **10.1. Qué son:** Una base de conocimiento pública es un catálogo externo de referencia, mantenido por terceros, que un agente consulta cuando el trabajo lo pide. No es un estándar obligatorio y no se copia a los repositorios consumidores. Vive en este repositorio como submódulo fijado bajo `knowledge/public/`. El submódulo versiona solo el commit; `generate-contexto.py` no vuelca su contenido (§5.10, igual que §8.2). La lista canónica, con el pin, está en `AGENTS.md`. Actualizar un pin es un cambio explícito en `AGENTS.md`, en esta sección, en `scripts/bootstrap-project.sh` y en el CHANGELOG.
-*   **10.2. Public APIs:** [`public-apis/public-apis`](https://github.com/public-apis/public-apis) (MIT) está fijado al commit `7598f906a610c6d6ebf7adc2e72b6b5fccc7eba0` (2026-09-28) en `knowledge/public/public-apis`. Antes de proponer una API HTTP pública, el agente consulta el `README.md` de ese submódulo y cita la entrada que elige: nombre, enlace, autenticación y HTTPS. Si ninguna entrada cubre el caso, lo dice y no inventa una fila del catálogo.
+*   **10.2. Public APIs:** [`public-apis/public-apis`](https://github.com/public-apis/public-apis) (MIT) está fijado al commit `7598f906a610c6d6ebf7adc2e72b6b5fccc7eba0` (2026-09-28) en `knowledge/public/public-apis`. Antes de proponer una API HTTP pública, el agente consulta el `README.md` de ese submódulo y cita la entrada que elige: nombre, enlace, autenticación y HTTPS. Si ninguna entrada cubre el caso, lo dice y no inventa una fila del catálogo. Para no cargar las ~2.000 filas, la consulta se hace con `scripts/find-public-api.py`, que filtra por categoría, texto, autenticación, HTTPS y CORS, y marca como `[patrocinado]` los enlaces con parámetros `utm_*`. Una entrada del catálogo no es un aval: antes de integrarla se verifican términos de uso, límites y costo. La key, si hace falta, va por entorno (§6.4).
 ```
 
 ## Ruta: `scripts/audit-standards.py`
@@ -19201,6 +19206,156 @@ def main() -> int:
         )
         return 1
 
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+## Ruta: `scripts/find-public-api.py`
+
+```python
+#!/usr/bin/env python3
+"""find-public-api.py — Busca en el catálogo public-apis fijado (RULES.md §10.2).
+
+Lee `knowledge/public/public-apis/README.md` (submódulo fijado) y filtra sus
+tablas por categoría, texto, autenticación, HTTPS y CORS. Evita que un agente
+cargue las ~2.000 filas del catálogo para elegir una API.
+
+Uso:
+    python scripts/find-public-api.py --list-categories
+    python scripts/find-public-api.py --category Weather --https --auth none
+    python scripts/find-public-api.py --query "exchange rate" --auth apiKey --json
+
+Sin coincidencias, sale con código 1: el catálogo no cubre el caso (§10.2).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from dataclasses import asdict, dataclass
+from pathlib import Path
+
+DEFAULT_CATALOG = (
+    Path(__file__).resolve().parent.parent / "knowledge" / "public" / "public-apis" / "README.md"
+)
+# Tolera filas sin "|" final y URLs con espacios sobrantes, presentes en el catálogo.
+ROW_RE = re.compile(r"^\|\s*\[(?P<name>[^\]]+)\]\((?P<url>[^)]+)\)\s*\|(?P<rest>.*)$")
+SPONSOR_MARKERS = ("utm_source=", "utm_campaign=")
+
+
+@dataclass
+class Entry:
+    category: str
+    name: str
+    url: str
+    description: str
+    auth: str
+    https: str
+    cors: str
+    sponsored: bool
+
+
+def parse_catalog(text: str) -> list[Entry]:
+    """Convierte las tablas `### <Categoría>` del README en entradas."""
+    entries: list[Entry] = []
+    category = ""
+    for line in text.splitlines():
+        if line.startswith("### "):
+            category = line[4:].strip()
+            continue
+        m = ROW_RE.match(line)
+        if not m or not category:
+            continue
+        cells = [c.strip() for c in m.group("rest").strip().strip("|").split("|")]
+        if len(cells) < 4:
+            continue
+        description, auth, https, cors = cells[0], cells[1].strip("`"), cells[2], cells[3]
+        url = m.group("url").strip()
+        entries.append(
+            Entry(
+                category=category,
+                name=m.group("name"),
+                url=url,
+                description=description,
+                auth=auth,
+                https=https,
+                cors=cors,
+                sponsored=any(s in url for s in SPONSOR_MARKERS),
+            )
+        )
+    return entries
+
+
+def matches(e: Entry, args: argparse.Namespace) -> bool:
+    if args.category and args.category.lower() not in e.category.lower():
+        return False
+    if args.query:
+        haystack = f"{e.name} {e.description}".lower()
+        if not all(word in haystack for word in args.query.lower().split()):
+            return False
+    if args.auth:
+        wanted = "no" if args.auth.lower() == "none" else args.auth.lower()
+        if e.auth.lower() != wanted:
+            return False
+    if args.https and e.https.lower() != "yes":
+        return False
+    if args.cors and e.cors.lower() != "yes":
+        return False
+    return not (args.no_sponsored and e.sponsored)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Busca en el catálogo public-apis (§10.2)")
+    parser.add_argument("--catalog", type=Path, default=DEFAULT_CATALOG, help="README.md")
+    parser.add_argument("--category", help="Subcadena del nombre de categoría (ej. Weather)")
+    parser.add_argument("--query", help="Palabras que deben aparecer en nombre o descripción")
+    parser.add_argument("--auth", help="none, apiKey, OAuth, X-Mashape-Key, User-Agent")
+    parser.add_argument("--https", action="store_true", help="Solo HTTPS = Yes")
+    parser.add_argument("--cors", action="store_true", help="Solo CORS = Yes")
+    parser.add_argument("--no-sponsored", action="store_true", help="Excluir enlaces con utm_*")
+    parser.add_argument("--list-categories", action="store_true")
+    parser.add_argument("--limit", type=int, default=50)
+    parser.add_argument("--json", action="store_true", help="Salida JSON")
+    args = parser.parse_args(argv)
+
+    if not args.catalog.is_file():
+        print(
+            f"No existe {args.catalog}. Inicializar el submódulo: "
+            "git submodule update --init knowledge/public/public-apis",
+            file=sys.stderr,
+        )
+        return 2
+    entries = parse_catalog(args.catalog.read_text(encoding="utf-8"))
+
+    if args.list_categories:
+        counts: dict[str, int] = {}
+        for e in entries:
+            counts[e.category] = counts.get(e.category, 0) + 1
+        for cat, n in sorted(counts.items()):
+            print(f"{cat} ({n})")
+        return 0
+
+    hits = [e for e in entries if matches(e, args)]
+    if not hits:
+        print("Sin coincidencias en el catálogo (§10.2: no inventar una entrada).", file=sys.stderr)
+        return 1
+    shown = hits[: args.limit]
+    if args.json:
+        print(json.dumps([asdict(e) for e in shown], ensure_ascii=False, indent=2))
+    else:
+        for e in shown:
+            flag = " [patrocinado]" if e.sponsored else ""
+            print(
+                f"[{e.category}] {e.name}{flag} — {e.description}\n"
+                f"    {e.url} · auth={e.auth} · https={e.https} · cors={e.cors}"
+            )
+        if len(hits) > len(shown):
+            print(f"… {len(hits) - len(shown)} más (subir --limit)", file=sys.stderr)
     return 0
 
 
@@ -21142,6 +21297,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | [docs/code-standards.md](../docs/code-standards.md) | Nomenclatura, lint, testing, review |
 | [docs/commit-conventions.md](../docs/commit-conventions.md) | Conventional Commits, branches, PRs |
 | `scripts/bootstrap-project.sh` | Scaffold obligatorio de un repo nuevo (§5.6) |
+| `scripts/find-public-api.py` | Busca en el catálogo `public-apis` fijado (§10.2) |
 | `scripts/generate-contexto.py` | Regenera `contexto_proyecto.md`, el volcado para un LLM (§5.10) |
 | `scripts/audit-standards.py` | Auditoría periódica de cumplimiento (§5.7) |
 | `scripts/check-secrets.py` | Escaneo de secretos, árbol + historial (§6.2) |
@@ -21176,7 +21332,7 @@ Cualquier cambio que altere propósito, arquitectura, uso, operación o forma de
 
 ## Ruta: `wiki/Knowledge.md`
 
-```markdown
+````markdown
 # Knowledge — bases de conocimiento públicas
 
 Catálogos de referencia según RULES.md §10. No son estándares: un agente los consulta cuando el trabajo lo pide, y cita la entrada que usa.
@@ -21187,9 +21343,18 @@ Catálogos de referencia según RULES.md §10. No son estándares: un agente los
 
 Antes de proponer una API HTTP pública:
 
-1. Abrir `knowledge/public/public-apis/README.md` (hace falta `git clone --recurse-submodules` o `git submodule update --init`).
+1. Buscar con `scripts/find-public-api.py` en lugar de leer el README completo (hace falta `git clone --recurse-submodules` o `git submodule update --init`):
+
+   ```bash
+   python scripts/find-public-api.py --list-categories
+   python scripts/find-public-api.py --category Weather --https --auth none
+   python scripts/find-public-api.py --query "exchange rate" --https --no-sponsored --json
+   ```
+
+   Sale con código 1 si no hay coincidencias y con 2 si falta el submódulo. Marca `[patrocinado]` las entradas con enlaces `utm_*`, y omite la tabla promocional del encabezado del catálogo, cuyas APIs ya figuran en sus categorías.
 2. Citar la entrada elegida: nombre, enlace, autenticación y HTTPS.
 3. Si ninguna entrada cubre el caso, decirlo. No inventar una fila del catálogo.
+4. Antes de integrar, verificar términos de uso, límites y costo. Una entrada no es un aval. La key va por entorno (§6.4).
 
 El catálogo vive solo en este repositorio. Los repos consumidores no lo copian: su `AGENTS.md`, generado por `bootstrap-project.sh`, apunta al pin de dev-standards.
 
@@ -21202,7 +21367,7 @@ No hay check en `scripts/audit-standards.py`. El catálogo no es un requisito de
 1. `git submodule update --remote knowledge/public/public-apis` y revisar el diff del catálogo.
 2. Anotar el commit nuevo en `AGENTS.md`, RULES.md §10.2 y `PUBLIC_APIS_COMMIT` de `scripts/bootstrap-project.sh`.
 3. Registrar el cambio en `CHANGELOG.md` y regenerar `contexto_proyecto.md`.
-```
+````
 
 ## Ruta: `wiki/Operations.md`
 

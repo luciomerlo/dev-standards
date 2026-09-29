@@ -8,9 +8,18 @@ Catálogos de referencia según RULES.md §10. No son estándares: un agente los
 
 Antes de proponer una API HTTP pública:
 
-1. Abrir `knowledge/public/public-apis/README.md` (hace falta `git clone --recurse-submodules` o `git submodule update --init`).
+1. Buscar con `scripts/find-public-api.py` en lugar de leer el README completo (hace falta `git clone --recurse-submodules` o `git submodule update --init`):
+
+   ```bash
+   python scripts/find-public-api.py --list-categories
+   python scripts/find-public-api.py --category Weather --https --auth none
+   python scripts/find-public-api.py --query "exchange rate" --https --no-sponsored --json
+   ```
+
+   Sale con código 1 si no hay coincidencias y con 2 si falta el submódulo. Marca `[patrocinado]` las entradas con enlaces `utm_*`, y omite la tabla promocional del encabezado del catálogo, cuyas APIs ya figuran en sus categorías.
 2. Citar la entrada elegida: nombre, enlace, autenticación y HTTPS.
 3. Si ninguna entrada cubre el caso, decirlo. No inventar una fila del catálogo.
+4. Antes de integrar, verificar términos de uso, límites y costo. Una entrada no es un aval. La key va por entorno (§6.4).
 
 El catálogo vive solo en este repositorio. Los repos consumidores no lo copian: su `AGENTS.md`, generado por `bootstrap-project.sh`, apunta al pin de dev-standards.
 

@@ -13,6 +13,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | [docs/code-standards.md](../docs/code-standards.md) | Nomenclatura, lint, testing, review |
 | [docs/commit-conventions.md](../docs/commit-conventions.md) | Conventional Commits, branches, PRs |
 | `scripts/bootstrap-project.sh` | Scaffold obligatorio de un repo nuevo (§5.6) |
+| `scripts/find-public-api.py` | Busca en el catálogo `public-apis` fijado (§10.2) |
 | `scripts/generate-contexto.py` | Regenera `contexto_proyecto.md`, el volcado para un LLM (§5.10) |
 | `scripts/audit-standards.py` | Auditoría periódica de cumplimiento (§5.7) |
 | `scripts/check-secrets.py` | Escaneo de secretos, árbol + historial (§6.2) |

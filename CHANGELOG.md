@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Line-length, naming and typing fixes only, no behavior change.
 
 ### Added
+- `scripts/find-public-api.py`: searches the pinned `public-apis` catalog (RULES.md §10.2) by category,
+  text, auth, HTTPS and CORS, flags `utm_*` links as sponsored, and exits 1 on no match. §10.2, `AGENTS.md`
+  and `wiki/Knowledge.md` point agents to it instead of reading the ~2,000-row README.
 - RULES.md §10: public knowledge bases live in this repo as pinned submodules under
   `knowledge/public/` and are not copied into consuming repos. First entry:
   [`public-apis/public-apis`](https://github.com/public-apis/public-apis) (MIT) at

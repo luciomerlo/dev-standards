@@ -30,6 +30,7 @@ graph TD
 | [`docs/commit-conventions.md`](docs/commit-conventions.md) | Convenciones de commits |
 | `scripts/bootstrap-project.sh` | Genera el scaffolding completo en un repo nuevo (README, CHANGELOG, CI, `.gitignore`, Dockerfile, `wiki/`, guardarraíl de secretos) |
 | `scripts/audit-standards.py` | Audita repos existentes contra RULES.md y genera `AUDIT_REPORT.md` con score 0-100 |
+| `scripts/find-public-api.py` | Busca en el catálogo `public-apis` fijado por categoría, texto, auth, HTTPS y CORS (RULES.md §10.2) |
 | `scripts/generate-contexto.py` | Regenera `contexto_proyecto.md` (RULES.md §5.10) |
 | `scripts/check-secrets.py` | Bloquea commits/CI con credenciales hardcodeadas (RULES.md §6) |
 | `scripts/gpu_compute.py` | Detección de CUDA + selección de backend de cómputo (RULES.md §7) |
