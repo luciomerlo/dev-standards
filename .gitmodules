@@ -4,3 +4,7 @@
 [submodule "knowledge/public/public-apis"]
 	path = knowledge/public/public-apis
 	url = https://github.com/public-apis/public-apis.git
+[submodule "knowledge/standards/claude-code-best-practice"]
+	path = knowledge/standards/claude-code-best-practice
+	url = https://github.com/shanraisshan/claude-code-best-practice.git
+	shallow = true

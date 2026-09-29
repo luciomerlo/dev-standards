@@ -39,7 +39,7 @@ git clone --recurse-submodules https://github.com/luciomerlo/dev-standards.git
 git submodule update --init
 ```
 
-`--recurse-submodules` trae `apple-design-skill` (§8) y el catálogo `public-apis` (§10, [Knowledge](Knowledge.md)).
+`--recurse-submodules` trae `apple-design-skill` (§8) el catálogo `public-apis` (§10, [Knowledge](Knowledge.md)) y `claude-code-best-practice` (§11, [ClaudeCode](ClaudeCode.md); superficial, ~77 MB).
 
 El submódulo `.claude/skills/apple-design` es el skill de revisión de dashboards (§8). Sin inicializarlo, el resto del repo funciona igual.
 

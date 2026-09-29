@@ -32,6 +32,10 @@ El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` 
 python scripts/generate-contexto.py
 ```
 
+### Check de configuración de Claude Code (§11)
+
+`check_claude_config()` exige `AGENTS.md` o `CLAUDE.md`, ninguno de más de 200 líneas y, si existe `.claude/`, que `.gitignore` excluya `settings.local.json`. No revisa subagentes, skills ni `.claude/rules/`: eso queda para el PR que toca la configuración. Ver [ClaudeCode](ClaudeCode.md).
+
 ### Check de AGENTS.md (§5.11)
 
 `check_agents_md()` exige un `AGENTS.md` en la raíz que mencione `dev-standards`. No verifica que el submódulo de `apple-design-skill` exista, porque el auditor no puede saber si el repo tiene un dashboard; esa parte se revisa en el PR.

@@ -14,6 +14,7 @@ y valida la presencia de:
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
   - contexto_proyecto.md con la estructura de RULES.md §5.10
   - AGENTS.md que referencia dev-standards (RULES.md §5.11)
+  - Configuración de Claude Code: CLAUDE.md/AGENTS.md de hasta 200 líneas (RULES.md §11)
   - Wiring de Graft (skill o .mcp.json) con graft/ fuera de git (RULES.md §9)
   - .gitignore
   - Dockerfile
@@ -50,6 +51,7 @@ class ProjectAudit:
     has_contexto: bool
     has_graft: bool
     has_agents_md: bool
+    has_claude_config: bool
     has_gitignore: bool
     has_dockerfile: bool
     has_ci: bool
@@ -232,6 +234,27 @@ def check_agents_md(project_path: Path) -> bool:
     return "dev-standards" in p.read_text(encoding="utf-8", errors="ignore")
 
 
+CLAUDE_MD_MAX_LINES = 200
+
+
+def check_claude_config(project_path: Path) -> bool:
+    """Verifica lo automatizable de RULES.md §11.3 (instrucciones acotadas, config local)."""
+    docs = [project_path / n for n in ("CLAUDE.md", "AGENTS.md") if (project_path / n).is_file()]
+    if not docs:
+        return False
+    for doc in docs:
+        n_lines = len(doc.read_text(encoding="utf-8", errors="ignore").splitlines())
+        if n_lines > CLAUDE_MD_MAX_LINES:
+            return False
+    if (project_path / ".claude").is_dir():
+        gi = project_path / ".gitignore"
+        if not gi.is_file() or "settings.local.json" not in gi.read_text(
+            encoding="utf-8", errors="ignore"
+        ):
+            return False
+    return True
+
+
 def check_graft(project_path: Path) -> bool:
     """Verifica el wiring de Graft y que su caché graft/ no se versione (RULES.md §9)."""
     wired = (project_path / ".claude" / "skills" / "graft" / "SKILL.md").is_file()
@@ -400,6 +423,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
     has_contexto = check_contexto(project_path)
     has_graft = check_graft(project_path)
     has_agents_md = check_agents_md(project_path)
+    has_claude_config = check_claude_config(project_path)
     has_gitignore = check_file_exists(project_path, ".gitignore")
     has_dockerfile = check_file_exists(project_path, "Dockerfile")
     has_ci = check_ci(project_path)
@@ -417,6 +441,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_contexto": 5,
         "has_graft": 5,
         "has_agents_md": 5,
+        "has_claude_config": 5,
         "has_gitignore": 5,
         "has_dockerfile": 5,
         "has_ci": 10,
@@ -442,6 +467,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_contexto": has_contexto,
         "has_graft": has_graft,
         "has_agents_md": has_agents_md,
+        "has_claude_config": has_claude_config,
         "has_gitignore": has_gitignore,
         "has_dockerfile": has_dockerfile,
         "has_ci": has_ci,
@@ -463,6 +489,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_contexto=has_contexto,
         has_graft=has_graft,
         has_agents_md=has_agents_md,
+        has_claude_config=has_claude_config,
         has_gitignore=has_gitignore,
         has_dockerfile=has_dockerfile,
         has_ci=has_ci,
@@ -512,6 +539,7 @@ def generate_report(audits: list[ProjectAudit], output_path: Path) -> None:
             ("contexto_proyecto.md (§5.10)", a.has_contexto),
             ("Graft (§9)", a.has_graft),
             ("AGENTS.md (§5.11)", a.has_agents_md),
+            ("Config Claude Code (§11)", a.has_claude_config),
             (".gitignore", a.has_gitignore),
             ("Dockerfile", a.has_dockerfile),
             ("CI/CD", a.has_ci),

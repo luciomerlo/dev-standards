@@ -37,6 +37,9 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Claude Code: configuración personal (RULES.md §11.3)
+.claude/settings.local.json
+
 # Datos y artefactos
 data/
 *.db

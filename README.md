@@ -23,8 +23,8 @@ graph TD
 
 | Archivo / carpeta | Rol |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) | Instrucciones para agentes, **lista canónica de estándares externos** (`apple-design-skill` §8, Graft §9, `/fix` §3.4) y bases de conocimiento públicas (§10) |
-| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7), estética de dashboards con Apple HIG (§8), grafo de contexto Graft (§9), bases de conocimiento públicas (§10) |
+| [`AGENTS.md`](AGENTS.md) | Instrucciones para agentes, **lista canónica de estándares externos** (`apple-design-skill` §8, Graft §9, `claude-code-best-practice` §11, `/fix` §3.4) y bases de conocimiento públicas (§10) |
+| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7), estética de dashboards con Apple HIG (§8), grafo de contexto Graft (§9), bases de conocimiento públicas (§10), configuración de Claude Code (§11) |
 | [`contexto_proyecto.md`](contexto_proyecto.md) | Base de código consolidada para un LLM posterior (§5.10). Regenerar con `scripts/generate-contexto.py` |
 | [`docs/code-standards.md`](docs/code-standards.md) | Nomenclatura, formato, testing, checklist de revisión |
 | [`docs/commit-conventions.md`](docs/commit-conventions.md) | Convenciones de commits |
@@ -40,6 +40,7 @@ graph TD
 | `scripts/transcribe_via_groq.py` | Cliente del backend `cloud-api` para proyectos basados en Whisper (Groq) |
 | `scripts/run_on_hf_inference.py` | Cliente del backend `cloud-api` para otros modelos hospedados en HF |
 | `.claude/skills/apple-design` | Submódulo fijado de [`apple-design-skill`](https://github.com/dickwu/apple-design-skill), el estándar de dashboards (§8). Clonar con `--recurse-submodules` |
+| `knowledge/standards/claude-code-best-practice` | Submódulo fijado de [`shanraisshan/claude-code-best-practice`](https://github.com/shanraisshan/claude-code-best-practice), estándar de configuración de Claude Code (§11). Superficial, ~77 MB |
 | `knowledge/public/public-apis` | Submódulo fijado de [`public-apis/public-apis`](https://github.com/public-apis/public-apis), catálogo de APIs HTTP públicas (§10). Clonar con `--recurse-submodules` |
 | [`wiki/`](wiki/Home.md) | Wiki operativa de este propio repo (onboarding, arquitectura, runbook) |
 
