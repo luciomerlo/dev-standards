@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Line-length, naming and typing fixes only, no behavior change.
 
 ### Added
+- RULES.md §11: Claude Code configuration follows [`shanraisshan/claude-code-best-practice`](https://github.com/shanraisshan/claude-code-best-practice)
+  (MIT), pinned to `bfcf0b5` as a shallow submodule at `knowledge/standards/claude-code-best-practice`
+  (~77 MB, this repo only; consumers reference the pin from their `AGENTS.md`). Minimums per repo:
+  `CLAUDE.md`/`AGENTS.md` up to 200 lines, essential commands, personal settings out of git, subagents
+  with `name`/`description`/`tools`, skills with a usable `description`. Community repo, not official docs:
+  official docs prevail on conflict. Audit check `check_claude_config()`; bootstrap adds
+  `.claude/settings.local.json` to `.gitignore` and a §11 line to the generated `AGENTS.md`; new Wiki page
+  `wiki/ClaudeCode.md`; `knowledge/standards/README.md`.
 - `scripts/find-public-api.py`: searches the pinned `public-apis` catalog (RULES.md §10.2) by category,
   text, auth, HTTPS and CORS, flags `utm_*` links as sponsored, and exits 1 on no match. §10.2, `AGENTS.md`
   and `wiki/Knowledge.md` point agents to it instead of reading the ~2,000-row README.

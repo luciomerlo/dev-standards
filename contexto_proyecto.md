@@ -8,7 +8,7 @@
   - Frameworks y plataforma: Docker, GitHub Actions, pre-commit, commitlint, config.yaml como fuente única de configuración.
   - Dependencias principales: pytest>=7.4, ruff>=0.1, mypy>=1.5, pre-commit>=3.3.
 
-- Árbol de directorios y archivos relevantes (54 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
+- Árbol de directorios y archivos relevantes (56 archivos volcados a continuación; se excluyen carpetas de build, binarios y dependencias como node_modules, bin, obj, .git, venv):
 
 ```text
 .
@@ -27,7 +27,9 @@
 │   ├── code-standards.md
 │   └── commit-conventions.md
 ├── knowledge/
-│   └── public/
+│   ├── public/
+│   │   └── README.md
+│   └── standards/
 │       └── README.md
 ├── scripts/
 │   ├── audit-standards.py
@@ -43,6 +45,7 @@
 │   └── transcribe_via_groq.py
 ├── wiki/
 │   ├── Architecture.md
+│   ├── ClaudeCode.md
 │   ├── Compute.md
 │   ├── Dashboards.md
 │   ├── Getting-Started.md
@@ -79,7 +82,7 @@
 └── test.py
 ```
 
-- Fuera del volcado de contenido: carpetas `.git`, `.mypy_cache`, `.ruff_cache`, `graft`, `.claude/skills/apple-design`, `knowledge/public/public-apis`, `scripts/__pycache__`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `.gitmodules`, `.ignore`, `LICENSE`.
+- Fuera del volcado de contenido: carpetas `.git`, `.mypy_cache`, `.ruff_cache`, `graft`, `.claude/skills/apple-design`, `knowledge/public/public-apis`, `knowledge/standards/claude-code-best-practice`, `scripts/__pycache__`; generados `AUDIT_REPORT.md`, `contexto_proyecto.md`, `project_audit_summary.csv`; no relevantes `.gitmodules`, `.ignore`, `LICENSE`.
 
 # ARCHIVOS DEL PROYECTO
 
@@ -841,6 +844,9 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Claude Code: configuración personal (RULES.md §11.3)
+.claude/settings.local.json
+
 # Datos y artefactos
 data/
 *.db
@@ -908,9 +914,10 @@ Este repositorio es la base de conocimiento de ingeniería del ecosistema. La fu
 |----------|-------|----------|----------------|---------------------------------------|
 | [`dickwu/apple-design-skill`](https://github.com/dickwu/apple-design-skill) | §8 | Repos con dashboard, panel o vista de datos | commit `39ea3fbab3011e0798c076dbeabf4917001499da` | `git submodule add https://github.com/dickwu/apple-design-skill.git .claude/skills/apple-design` y luego `git -C .claude/skills/apple-design checkout 39ea3fb…`; o `bootstrap-project.sh --dashboard` |
 | [`trailhq/Graft`](https://github.com/trailhq/Graft) (`@nanonets/graft`) | §9 | Todo repo con código fuente | `0.19.0` | `npm install -g @nanonets/graft@0.19.0 && graft init --agents claude --no-global` |
+| [`shanraisshan/claude-code-best-practice`](https://github.com/shanraisshan/claude-code-best-practice) | §11 | Todo repo con `CLAUDE.md`, `AGENTS.md` o `.claude/` | commit `bfcf0b5abc7f9bb5da9bd41cbba070d9cef330d2` | No se instala: se consulta el pin en `knowledge/standards/claude-code-best-practice` de este repo y se cumplen los mínimos de §11.3 |
 | Skill `/fix` | §3.4 | Repos con interfaz web | — | Se corre al cerrar el desarrollo inicial, antes del primer release |
 
-Cambiar una versión fijada es un cambio explícito en este repo: actualizar esta tabla, la regla correspondiente de RULES.md, las constantes de `scripts/bootstrap-project.sh` (`APPLE_DESIGN_COMMIT`, `GRAFT_VERSION`, `PUBLIC_APIS_COMMIT`) y el CHANGELOG, todo en el mismo cambio.
+Cambiar una versión fijada es un cambio explícito en este repo: actualizar esta tabla, la regla correspondiente de RULES.md, las constantes de `scripts/bootstrap-project.sh` (`APPLE_DESIGN_COMMIT`, `GRAFT_VERSION`, `PUBLIC_APIS_COMMIT`, `CLAUDE_BP_COMMIT`) y el CHANGELOG, todo en el mismo cambio.
 
 ## Bases de conocimiento públicas
 
@@ -924,8 +931,8 @@ Actualizar un pin es un cambio explícito: esta tabla, RULES.md §10, `PUBLIC_AP
 
 ## Qué hacer como agente
 
-- **Trabajando en un repo consumidor:** leer su `AGENTS.md` (§5.11) y aplicar los estándares de la tabla que correspondan. Si el repo tiene un dashboard y no tiene `.claude/skills/apple-design`, proponer instalarlo en el mismo cambio. Todo PR que toque un dashboard lleva la revisión de `/apple-design`, y sus hallazgos Critical bloquean el merge. Antes de proponer una API HTTP pública, consultar el catálogo de §10 en este repo con `python scripts/find-public-api.py --category <cat> --https` (o `--query "<texto>"`) y citar la entrada elegida.
-- **Trabajando en dev-standards:** este repo aplica sus propios estándares. `apple-design-skill` está como submódulo en `.claude/skills/apple-design` y `public-apis` en `knowledge/public/public-apis` (clonar con `--recurse-submodules`). Graft está conectado (`graft ask` antes de leer código). Todo cambio de reglas actualiza `wiki/`, `CHANGELOG.md` y `contexto_proyecto.md` en el mismo commit.
+- **Trabajando en un repo consumidor:** leer su `AGENTS.md` (§5.11) y aplicar los estándares de la tabla que correspondan. Si el repo tiene un dashboard y no tiene `.claude/skills/apple-design`, proponer instalarlo en el mismo cambio. Todo PR que toque un dashboard lleva la revisión de `/apple-design`, y sus hallazgos Critical bloquean el merge. Antes de proponer configuración de Claude Code (skills, subagentes, hooks, settings, memoria), consultar el pin de §11 (`knowledge/standards/claude-code-best-practice`) y citar el archivo. Antes de proponer una API HTTP pública, consultar el catálogo de §10 en este repo con `python scripts/find-public-api.py --category <cat> --https` (o `--query "<texto>"`) y citar la entrada elegida.
+- **Trabajando en dev-standards:** este repo aplica sus propios estándares. `apple-design-skill` está como submódulo en `.claude/skills/apple-design` y `public-apis` en `knowledge/public/public-apis` y `claude-code-best-practice` en `knowledge/standards/claude-code-best-practice` (clonar con `--recurse-submodules`). Graft está conectado (`graft ask` antes de leer código). Todo cambio de reglas actualiza `wiki/`, `CHANGELOG.md` y `contexto_proyecto.md` en el mismo commit.
 ```
 
 ## Ruta: `another_test.txt`
@@ -15951,6 +15958,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Line-length, naming and typing fixes only, no behavior change.
 
 ### Added
+- RULES.md §11: Claude Code configuration follows [`shanraisshan/claude-code-best-practice`](https://github.com/shanraisshan/claude-code-best-practice)
+  (MIT), pinned to `bfcf0b5` as a shallow submodule at `knowledge/standards/claude-code-best-practice`
+  (~77 MB, this repo only; consumers reference the pin from their `AGENTS.md`). Minimums per repo:
+  `CLAUDE.md`/`AGENTS.md` up to 200 lines, essential commands, personal settings out of git, subagents
+  with `name`/`description`/`tools`, skills with a usable `description`. Community repo, not official docs:
+  official docs prevail on conflict. Audit check `check_claude_config()`; bootstrap adds
+  `.claude/settings.local.json` to `.gitignore` and a §11 line to the generated `AGENTS.md`; new Wiki page
+  `wiki/ClaudeCode.md`; `knowledge/standards/README.md`.
 - `scripts/find-public-api.py`: searches the pinned `public-apis` catalog (RULES.md §10.2) by category,
   text, auth, HTTPS and CORS, flags `utm_*` links as sponsored, and exits 1 on no match. §10.2, `AGENTS.md`
   and `wiki/Knowledge.md` point agents to it instead of reading the ~2,000-row README.
@@ -17285,6 +17300,26 @@ git submodule update --init knowledge/public/public-apis
 `scripts/generate-contexto.py` excluye estas rutas (están en `.gitmodules`) y no vuelca el catálogo en `contexto_proyecto.md`.
 ````
 
+## Ruta: `knowledge/standards/README.md`
+
+````markdown
+# Estándares de referencia externos
+
+Repositorios de terceros que fijan un estándar de dev-standards (RULES.md §11). Cada uno es un submódulo fijado: este árbol guarda el commit, no una copia que se edita a mano. No se copian a los repos consumidores; su `AGENTS.md` apunta al pin de acá.
+
+| Estándar | Ruta | Upstream | Pin | Licencia | Regla |
+|----------|------|----------|-----|----------|-------|
+| Claude Code best practice | [`claude-code-best-practice/`](claude-code-best-practice/README.md) | [shanraisshan/claude-code-best-practice](https://github.com/shanraisshan/claude-code-best-practice) | `bfcf0b5abc7f9bb5da9bd41cbba070d9cef330d2` | MIT | §11 |
+
+Clonar con `git clone --recurse-submodules` (el submódulo es superficial, `shallow = true`, pero pesa ~77 MB por el material multimedia). En un clon existente:
+
+```bash
+git submodule update --init knowledge/standards/claude-code-best-practice
+```
+
+`scripts/generate-contexto.py` excluye estas rutas (están en `.gitmodules`).
+````
+
 ## Ruta: `PENDIENTES.md`
 
 ````markdown
@@ -17368,8 +17403,8 @@ graph TD
 
 | Archivo / carpeta | Rol |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) | Instrucciones para agentes, **lista canónica de estándares externos** (`apple-design-skill` §8, Graft §9, `/fix` §3.4) y bases de conocimiento públicas (§10) |
-| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7), estética de dashboards con Apple HIG (§8), grafo de contexto Graft (§9), bases de conocimiento públicas (§10) |
+| [`AGENTS.md`](AGENTS.md) | Instrucciones para agentes, **lista canónica de estándares externos** (`apple-design-skill` §8, Graft §9, `claude-code-best-practice` §11, `/fix` §3.4) y bases de conocimiento públicas (§10) |
+| [`RULES.md`](RULES.md) | Directivas obligatorias: arquitectura, resiliencia, versionado, contexto para LLM (§5.10), seguridad de secretos (§6), cómputo local vs. web (§7), estética de dashboards con Apple HIG (§8), grafo de contexto Graft (§9), bases de conocimiento públicas (§10), configuración de Claude Code (§11) |
 | [`contexto_proyecto.md`](contexto_proyecto.md) | Base de código consolidada para un LLM posterior (§5.10). Regenerar con `scripts/generate-contexto.py` |
 | [`docs/code-standards.md`](docs/code-standards.md) | Nomenclatura, formato, testing, checklist de revisión |
 | [`docs/commit-conventions.md`](docs/commit-conventions.md) | Convenciones de commits |
@@ -17385,6 +17420,7 @@ graph TD
 | `scripts/transcribe_via_groq.py` | Cliente del backend `cloud-api` para proyectos basados en Whisper (Groq) |
 | `scripts/run_on_hf_inference.py` | Cliente del backend `cloud-api` para otros modelos hospedados en HF |
 | `.claude/skills/apple-design` | Submódulo fijado de [`apple-design-skill`](https://github.com/dickwu/apple-design-skill), el estándar de dashboards (§8). Clonar con `--recurse-submodules` |
+| `knowledge/standards/claude-code-best-practice` | Submódulo fijado de [`shanraisshan/claude-code-best-practice`](https://github.com/shanraisshan/claude-code-best-practice), estándar de configuración de Claude Code (§11). Superficial, ~77 MB |
 | `knowledge/public/public-apis` | Submódulo fijado de [`public-apis/public-apis`](https://github.com/public-apis/public-apis), catálogo de APIs HTTP públicas (§10). Clonar con `--recurse-submodules` |
 | [`wiki/`](wiki/Home.md) | Wiki operativa de este propio repo (onboarding, arquitectura, runbook) |
 
@@ -17504,7 +17540,7 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
 *   **5.8. Descripción del Repositorio:** Todo repositorio debe tener una descripción (campo "description" del hosting, ej. GitHub), en inglés, de máximo 350 caracteres. Debe crearse al crear `README.md` y actualizarse cada vez que `README.md` cambie, manteniéndola alineada con el propósito vigente del proyecto.
 *   **5.9. Wiki del Repositorio:** Todo repositorio debe tener su propia Wiki, versionada en el directorio `wiki/` (Markdown compatible con GitHub Wiki). Debe crearse junto al `README.md` (bootstrap §5.6) y actualizarse en el **mismo cambio** que altere propósito, arquitectura, uso, operación o forma de contribuir. El `README.md` es la puerta de entrada; la Wiki es el conocimiento operativo vivo (onboarding, arquitectura, runbook, troubleshooting) y no puede quedar en plantillas vacías ni desactualizada respecto al código. Páginas mínimas obligatorias: `Home.md` (índice y propósito), `Architecture.md`, `Getting-Started.md`, `Operations.md`. El README debe enlazar a `wiki/Home.md`. Publicar esas páginas al Wiki tab de GitHub (`<repo>.wiki.git`) es opcional; `wiki/` en el árbol del repo es la fuente de verdad.
 *   **5.10. Contexto consolidado del proyecto (`contexto_proyecto.md`):** Tan pronto como sea posible debe existir, en la raíz, un único archivo `contexto_proyecto.md` optimizado para que un motor de LLM posterior entienda la base de código completa. En un repositorio nuevo se genera al cerrar el scaffolding (§5.6); en uno existente, en el primer cambio que toque el árbol. Se regenera en el **mismo cambio** que altere código, configuración o documentación normativa (`python scripts/generate-contexto.py`), de modo que se mantenga actualizado. La implementación de referencia es `scripts/generate-contexto.py`; el bootstrap la copia y la ejecuta. Estructura estricta: (1) `# RESUMEN Y ARQUITECTURA`, con el propósito general, el stack tecnológico (lenguajes, frameworks y dependencias principales) y un árbol de directorios y archivos relevantes, excluyendo carpetas de build, binarios y dependencias (`node_modules`, `bin`, `obj`, `.git`, `venv`, `.venv`, `dist`, `build`, `target`, `__pycache__` y equivalentes); (2) `# ARCHIVOS DEL PROYECTO`, y por cada archivo de código o configuración relevante un apartado `## Ruta:` con la ruta relativa (por ejemplo `camino/al/archivo.ext`) seguido de un bloque con el lenguaje y el **contenido completo**, sin omisiones. Los Markdown versionados que definen el sistema (README, CHANGELOG, reglas, `docs/`, `wiki/` y demás `.md` de producto) entran en ese volcado. No se incluye el propio `contexto_proyecto.md` ni salidas generadas de auditoría (`AUDIT_REPORT.md` y resúmenes CSV); esos artefactos pueden nombrarse en el árbol como excluidos.
-*   **5.11. Instrucciones para Agentes (`AGENTS.md`):** Todo repositorio que use dev-standards como base de conocimiento tiene en la raíz un `AGENTS.md` que lo declara y enlaza `RULES.md`, y lista los estándares externos que los agentes deben aplicar: `apple-design-skill` para dashboards (§8), Graft (§9) y `/fix` (§3.4). Incluye además un `CLAUDE.md` que lo importa (`@AGENTS.md`). El bootstrap (§5.6) genera ambos, y `audit-standards.py` verifica que `AGENTS.md` exista y referencie dev-standards. La lista canónica de estándares externos, con sus versiones fijadas, está en el `AGENTS.md` de este repositorio, junto con las bases de conocimiento públicas (§10).
+*   **5.11. Instrucciones para Agentes (`AGENTS.md`):** Todo repositorio que use dev-standards como base de conocimiento tiene en la raíz un `AGENTS.md` que lo declara y enlaza `RULES.md`, y lista los estándares externos que los agentes deben aplicar: `apple-design-skill` para dashboards (§8), Graft (§9) y `/fix` (§3.4). Incluye además un `CLAUDE.md` que lo importa (`@AGENTS.md`). El bootstrap (§5.6) genera ambos, y `audit-standards.py` verifica que `AGENTS.md` exista y referencie dev-standards. La lista canónica de estándares externos, con sus versiones fijadas, está en el `AGENTS.md` de este repositorio, junto con las bases de conocimiento públicas (§10) y las buenas prácticas de Claude Code (§11).
 
 ---
 
@@ -17569,6 +17605,23 @@ Este documento consolidado establece los estßndares, patrones arquitect¾nicos 
 
 *   **10.1. Qué son:** Una base de conocimiento pública es un catálogo externo de referencia, mantenido por terceros, que un agente consulta cuando el trabajo lo pide. No es un estándar obligatorio y no se copia a los repositorios consumidores. Vive en este repositorio como submódulo fijado bajo `knowledge/public/`. El submódulo versiona solo el commit; `generate-contexto.py` no vuelca su contenido (§5.10, igual que §8.2). La lista canónica, con el pin, está en `AGENTS.md`. Actualizar un pin es un cambio explícito en `AGENTS.md`, en esta sección, en `scripts/bootstrap-project.sh` y en el CHANGELOG.
 *   **10.2. Public APIs:** [`public-apis/public-apis`](https://github.com/public-apis/public-apis) (MIT) está fijado al commit `7598f906a610c6d6ebf7adc2e72b6b5fccc7eba0` (2026-09-28) en `knowledge/public/public-apis`. Antes de proponer una API HTTP pública, el agente consulta el `README.md` de ese submódulo y cita la entrada que elige: nombre, enlace, autenticación y HTTPS. Si ninguna entrada cubre el caso, lo dice y no inventa una fila del catálogo. Para no cargar las ~2.000 filas, la consulta se hace con `scripts/find-public-api.py`, que filtra por categoría, texto, autenticación, HTTPS y CORS, y marca como `[patrocinado]` los enlaces con parámetros `utm_*`. Una entrada del catálogo no es un aval: antes de integrarla se verifican términos de uso, límites y costo. La key, si hace falta, va por entorno (§6.4).
+
+---
+
+## 11. Configuración de Claude Code (buenas prácticas)
+
+*   **11.1. Estándar de Referencia:** La configuración de Claude Code de todo repositorio (`CLAUDE.md` / `AGENTS.md`, `.claude/rules/`, skills, subagentes, hooks, settings, MCP y memoria) sigue [`shanraisshan/claude-code-best-practice`](https://github.com/shanraisshan/claude-code-best-practice) (MIT), fijado al commit `bfcf0b5abc7f9bb5da9bd41cbba070d9cef330d2` (2026-09-29). Es un repositorio comunitario de referencia, no documentación oficial de Anthropic: ante una discrepancia prevalece la [documentación oficial](https://code.claude.com/docs). Actualizar el pin es un cambio explícito en `AGENTS.md`, en esta sección, en `CLAUDE_BP_COMMIT` de `scripts/bootstrap-project.sh` y en el CHANGELOG.
+*   **11.2. Dónde vive:** Como submódulo fijado y superficial (`shallow = true`) en `knowledge/standards/claude-code-best-practice`, solo en este repositorio (~77 MB, en su mayoría material multimedia de `tips/` y `presentation/`). No se copia a los repos consumidores: su `AGENTS.md` (§5.11) apunta al pin de dev-standards. `generate-contexto.py` y Graft lo omiten, y el submódulo versiona solo el commit.
+*   **11.3. Mínimos por Repositorio:** Se distilan de ese repositorio (archivos citados entre paréntesis); lo marcado *criterio propio* es una exigencia de dev-standards.
+    *   **`CLAUDE.md` y `AGENTS.md`:** máximo 200 líneas por archivo (`README.md › CLAUDE.md + .claude/rules`). Lo que exceda se divide en `.claude/rules/*.md`; con `paths:` en el frontmatter se cargan solo cuando Claude toca archivos que coinciden.
+    *   **Comandos esenciales:** incluyen los comandos de instalación, build y test, de modo que "corre los tests" funcione a la primera (`README.md › CLAUDE.md + .claude/rules`).
+    *   **Settings:** lo compartido va en `.claude/settings.json` y lo personal en `.claude/settings.local.json`, ignorado por git (`CLAUDE.md › Configuration Hierarchy`). Ninguno contiene secretos (§6).
+    *   **Subagentes (`.claude/agents/*.md`):** `name` y `description` son obligatorios (`best-practice/claude-subagents.md`). *Criterio propio:* declaran `tools` como allowlist, porque sin él heredan todas, y fijan `model` explícito cuando la tarea lo justifica.
+    *   **Skills (`.claude/skills/<nombre>/SKILL.md`):** el `description` dice cuándo invocarla, porque de él depende el autodescubrimiento (`best-practice/claude-skills.md`). *Criterio propio:* las que tienen efectos laterales (deploy, escritura externa) llevan `disable-model-invocation: true`.
+*   **11.4. Uso en Sesión (recomendado, no auditado):** plan mode en tareas complejas; `/compact` manual con una indicación al llegar a ~50 % del contexto; tarea nueva, sesión nueva; subtareas que quepan en menos del 50 % del contexto (`README.md › Tips`, `CLAUDE.md › Workflow Best Practices`).
+*   **11.5. Consulta Previa:** Antes de responder o proponer configuración de Claude Code, el agente consulta el pin (`best-practice/`, `tips/`, `reports/` y `README.md`) y cita el archivo. Solo si no está ahí recurre a la documentación oficial.
+*   **11.6. Lo que No se Adopta:** Las reglas propias de ese repositorio (un commit por archivo, el sistema de ejemplo del clima, los sonidos de hooks) no son un estándar: los commits siguen `docs/commit-conventions.md`.
+*   **11.7. Auditoría:** `audit-standards.py` verifica lo automatizable de §11.3: existe `AGENTS.md` o `CLAUDE.md`, ninguno supera 200 líneas y, si hay `.claude/`, `.gitignore` excluye `settings.local.json`. El resto se revisa en el PR que toca la configuración.
 ```
 
 ## Ruta: `scripts/audit-standards.py`
@@ -17590,6 +17643,7 @@ y valida la presencia de:
   - Wiki en wiki/ con páginas mínimas rellenas (RULES.md §5.9)
   - contexto_proyecto.md con la estructura de RULES.md §5.10
   - AGENTS.md que referencia dev-standards (RULES.md §5.11)
+  - Configuración de Claude Code: CLAUDE.md/AGENTS.md de hasta 200 líneas (RULES.md §11)
   - Wiring de Graft (skill o .mcp.json) con graft/ fuera de git (RULES.md §9)
   - .gitignore
   - Dockerfile
@@ -17626,6 +17680,7 @@ class ProjectAudit:
     has_contexto: bool
     has_graft: bool
     has_agents_md: bool
+    has_claude_config: bool
     has_gitignore: bool
     has_dockerfile: bool
     has_ci: bool
@@ -17808,6 +17863,27 @@ def check_agents_md(project_path: Path) -> bool:
     return "dev-standards" in p.read_text(encoding="utf-8", errors="ignore")
 
 
+CLAUDE_MD_MAX_LINES = 200
+
+
+def check_claude_config(project_path: Path) -> bool:
+    """Verifica lo automatizable de RULES.md §11.3 (instrucciones acotadas, config local)."""
+    docs = [project_path / n for n in ("CLAUDE.md", "AGENTS.md") if (project_path / n).is_file()]
+    if not docs:
+        return False
+    for doc in docs:
+        n_lines = len(doc.read_text(encoding="utf-8", errors="ignore").splitlines())
+        if n_lines > CLAUDE_MD_MAX_LINES:
+            return False
+    if (project_path / ".claude").is_dir():
+        gi = project_path / ".gitignore"
+        if not gi.is_file() or "settings.local.json" not in gi.read_text(
+            encoding="utf-8", errors="ignore"
+        ):
+            return False
+    return True
+
+
 def check_graft(project_path: Path) -> bool:
     """Verifica el wiring de Graft y que su caché graft/ no se versione (RULES.md §9)."""
     wired = (project_path / ".claude" / "skills" / "graft" / "SKILL.md").is_file()
@@ -17976,6 +18052,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
     has_contexto = check_contexto(project_path)
     has_graft = check_graft(project_path)
     has_agents_md = check_agents_md(project_path)
+    has_claude_config = check_claude_config(project_path)
     has_gitignore = check_file_exists(project_path, ".gitignore")
     has_dockerfile = check_file_exists(project_path, "Dockerfile")
     has_ci = check_ci(project_path)
@@ -17993,6 +18070,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_contexto": 5,
         "has_graft": 5,
         "has_agents_md": 5,
+        "has_claude_config": 5,
         "has_gitignore": 5,
         "has_dockerfile": 5,
         "has_ci": 10,
@@ -18018,6 +18096,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         "has_contexto": has_contexto,
         "has_graft": has_graft,
         "has_agents_md": has_agents_md,
+        "has_claude_config": has_claude_config,
         "has_gitignore": has_gitignore,
         "has_dockerfile": has_dockerfile,
         "has_ci": has_ci,
@@ -18039,6 +18118,7 @@ def audit_project(project_path: Path) -> ProjectAudit:
         has_contexto=has_contexto,
         has_graft=has_graft,
         has_agents_md=has_agents_md,
+        has_claude_config=has_claude_config,
         has_gitignore=has_gitignore,
         has_dockerfile=has_dockerfile,
         has_ci=has_ci,
@@ -18088,6 +18168,7 @@ def generate_report(audits: list[ProjectAudit], output_path: Path) -> None:
             ("contexto_proyecto.md (§5.10)", a.has_contexto),
             ("Graft (§9)", a.has_graft),
             ("AGENTS.md (§5.11)", a.has_agents_md),
+            ("Config Claude Code (§11)", a.has_claude_config),
             (".gitignore", a.has_gitignore),
             ("Dockerfile", a.has_dockerfile),
             ("CI/CD", a.has_ci),
@@ -18194,11 +18275,12 @@ PROJECT_DESC=""
 HAS_DASHBOARD=0
 REPO_ROOT="$(pwd)"
 
-# Estándares externos fijados (RULES.md §8.1, §9.1) y base pública (§10.2)
+# Estándares externos fijados (RULES.md §8.1, §9.1) base pública (§10.2) y buenas prácticas de Claude Code (§11.1)
 APPLE_DESIGN_URL="https://github.com/dickwu/apple-design-skill.git"
 APPLE_DESIGN_COMMIT="39ea3fbab3011e0798c076dbeabf4917001499da"
 GRAFT_VERSION="0.19.0"
 PUBLIC_APIS_COMMIT="7598f906a610c6d6ebf7adc2e72b6b5fccc7eba0"
+CLAUDE_BP_COMMIT="bfcf0b5abc7f9bb5da9bd41cbba070d9cef330d2"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -18266,6 +18348,9 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Claude Code: configuración personal (RULES.md §11.3)
+.claude/settings.local.json
 
 # Datos y artefactos
 data/
@@ -19050,6 +19135,7 @@ Este repositorio sigue [dev-standards](https://github.com/luciomerlo/dev-standar
 
 $DASHBOARD_LINE
 - **Graft (§9):** usar \`graft ask\` / \`graft callers\` antes de leer o cambiar código. El wiring se versiona en \`.claude/\` y \`.mcp.json\`; \`graft/\` no se versiona.
+- **Claude Code (§11):** \`CLAUDE.md\` y \`AGENTS.md\` de hasta 200 líneas por archivo, con comandos de build y test; \`.claude/settings.local.json\` fuera de git; subagentes con \`tools\` y skills con \`description\`. Buenas prácticas fijadas en dev-standards (\`knowledge/standards/claude-code-best-practice\`, commit \`${CLAUDE_BP_COMMIT:0:7}\`); consultarlas antes de proponer configuración.
 - **APIs públicas (§10):** antes de elegir una API HTTP pública, consultar el catálogo fijado en dev-standards (\`knowledge/public/public-apis\`, commit \`${PUBLIC_APIS_COMMIT:0:7}\`). No se copia a este repo.
 - **Rendimiento (§3.4):** con interfaz web, sugerir \`/fix\` al cerrar el desarrollo inicial, antes del primer release.
 - **Contexto (§5.10) y Wiki (§5.9):** regenerar \`contexto_proyecto.md\` y actualizar \`wiki/\` en el mismo cambio que altere código, uso o arquitectura.
@@ -20859,6 +20945,7 @@ if __name__ == "__main__":
 * [Compute](Compute)
 * [Dashboards](Dashboards)
 * [Graft](Graft)
+* [Claude Code](ClaudeCode)
 * [Knowledge](Knowledge)
 * [RULES.md](../RULES.md)
 * [README](../README.md)
@@ -20917,7 +21004,60 @@ graph TD
 | §7 | Detección de CUDA, los 5 backends de cómputo, selección de UI/CLI, exclusión de modelos de difusión, implementación de referencia |
 | §8 | Estética de dashboards: `apple-design-skill` (Apple HIG) fijado por commit, revisión obligatoria en PR, mínimos de contraste/tamaño/color/gráficos, anti-plantilla, tokens |
 | §9 | Graft: grafo de contexto para agentes fijado a `0.19.0`, wiring versionado, `graft/` como caché, capa LLM opcional, telemetría deshabilitada |
+| §11 | Configuración de Claude Code: `claude-code-best-practice` fijado por commit como submódulo superficial en `knowledge/standards/`; `CLAUDE.md`/`AGENTS.md` de hasta 200 líneas, config personal fuera de git, subagentes y skills bien definidos; chequeo `check_claude_config()` |
 | §10 | Bases de conocimiento públicas: catálogos de terceros como submódulos fijados en `knowledge/public/`, consultados y no copiados. Primera entrada: `public-apis` |
+````
+
+## Ruta: `wiki/ClaudeCode.md`
+
+````markdown
+# Claude Code — buenas prácticas de configuración
+
+Cómo se configura Claude Code en todo repositorio, según RULES.md §11. El estándar de referencia es [`shanraisshan/claude-code-best-practice`](https://github.com/shanraisshan/claude-code-best-practice) (MIT), fijado al commit `bfcf0b5abc7f9bb5da9bd41cbba070d9cef330d2` (2026-09-29). Es un repositorio comunitario, no documentación oficial: ante una discrepancia prevalece la [documentación oficial](https://code.claude.com/docs).
+
+## Dónde vive
+
+Como submódulo superficial en `knowledge/standards/claude-code-best-practice`, solo en dev-standards (~77 MB). No se copia a los repos consumidores; su `AGENTS.md` (§5.11) apunta al pin. Clonar con `--recurse-submodules` o, en un clon existente:
+
+```bash
+git submodule update --init knowledge/standards/claude-code-best-practice
+```
+
+## Mínimos por repositorio (§11.3)
+
+| Elemento | Exigencia | Fuente en el pin |
+|----------|-----------|------------------|
+| `CLAUDE.md` / `AGENTS.md` | Máximo 200 líneas por archivo. Lo que exceda va a `.claude/rules/*.md` | `README.md › CLAUDE.md + .claude/rules` |
+| `.claude/rules/*.md` | Con `paths:` en el frontmatter se cargan solo al tocar archivos que coinciden; sin él, en cada sesión | `CLAUDE.md › Workflow Best Practices` |
+| Comandos esenciales | Instalación, build y test, para que "corre los tests" funcione a la primera | `README.md › CLAUDE.md + .claude/rules` |
+| Settings | Compartido en `.claude/settings.json`; personal en `.claude/settings.local.json`, ignorado por git. Sin secretos (§6) | `CLAUDE.md › Configuration Hierarchy` |
+| Subagentes | `name` y `description` obligatorios. *Criterio propio:* `tools` como allowlist (sin él heredan todas) y `model` explícito si la tarea lo justifica | `best-practice/claude-subagents.md` |
+| Skills | `description` que diga cuándo invocarla. *Criterio propio:* `disable-model-invocation: true` si tiene efectos laterales | `best-practice/claude-skills.md` |
+
+## Uso en sesión (recomendado, no auditado)
+
+- Plan mode en tareas complejas.
+- `/compact` manual, con una indicación de qué conservar, al llegar a ~50 % del contexto.
+- Tarea nueva, sesión nueva.
+- Subtareas que quepan en menos del 50 % del contexto.
+
+## Consulta previa (§11.5)
+
+Antes de responder o proponer configuración de Claude Code (skills, subagentes, hooks, settings, memoria, MCP), el agente busca en el pin (`best-practice/`, `tips/`, `reports/`, `README.md`) y cita el archivo. Solo si no está ahí recurre a la documentación oficial.
+
+## Qué no se adopta (§11.6)
+
+Las reglas propias de ese repositorio (un commit por archivo, el sistema de ejemplo del clima, los sonidos de hooks) no son un estándar. Los commits siguen `docs/commit-conventions.md`.
+
+## Auditoría (§11.7)
+
+`check_claude_config()` en `scripts/audit-standards.py` exige `AGENTS.md` o `CLAUDE.md`, ninguno de más de 200 líneas y, si existe `.claude/`, que `.gitignore` excluya `settings.local.json`. El resto (subagentes, skills, `.claude/rules/`) se revisa en el PR que toca la configuración.
+
+## Actualizar el pin
+
+1. `git submodule update --remote knowledge/standards/claude-code-best-practice` y revisar el diff de `best-practice/` y `README.md`.
+2. Anotar el commit nuevo en `AGENTS.md`, RULES.md §11.1, `CLAUDE_BP_COMMIT` de `scripts/bootstrap-project.sh`, `knowledge/standards/README.md` y esta página.
+3. Registrar el cambio en `CHANGELOG.md` y regenerar `contexto_proyecto.md`.
 ````
 
 ## Ruta: `wiki/Compute.md`
@@ -21176,7 +21316,7 @@ git clone --recurse-submodules https://github.com/luciomerlo/dev-standards.git
 git submodule update --init
 ```
 
-`--recurse-submodules` trae `apple-design-skill` (§8) y el catálogo `public-apis` (§10, [Knowledge](Knowledge.md)).
+`--recurse-submodules` trae `apple-design-skill` (§8) el catálogo `public-apis` (§10, [Knowledge](Knowledge.md)) y `claude-code-best-practice` (§11, [ClaudeCode](ClaudeCode.md); superficial, ~77 MB).
 
 El submódulo `.claude/skills/apple-design` es el skill de revisión de dashboards (§8). Sin inicializarlo, el resto del repo funciona igual.
 
@@ -21293,7 +21433,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | Artefacto | Rol |
 |-----------|-----|
 | [AGENTS.md](../AGENTS.md) | Estándares externos, con sus versiones fijadas, y bases de conocimiento públicas (§5.11, §10) |
-| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§10) |
+| [RULES.md](../RULES.md) | Fuente de verdad de las directivas (§1–§11) |
 | [docs/code-standards.md](../docs/code-standards.md) | Nomenclatura, lint, testing, review |
 | [docs/commit-conventions.md](../docs/commit-conventions.md) | Conventional Commits, branches, PRs |
 | `scripts/bootstrap-project.sh` | Scaffold obligatorio de un repo nuevo (§5.6) |
@@ -21309,6 +21449,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | `scripts/run_on_modal.py` | Cliente del backend `modal` (Modal, ~$30 USD/mes gratis) (§7.2) |
 | `config.yaml` | SSoT de configuración de dominio (§1.1) |
 | `.claude/skills/apple-design` | Submódulo fijado de `apple-design-skill`, el skill de revisión de dashboards (§8) |
+| `knowledge/standards/claude-code-best-practice` | Submódulo fijado y superficial de `claude-code-best-practice`, estándar de configuración de Claude Code (§11) |
 | `knowledge/public/public-apis` | Submódulo fijado de `public-apis`, catálogo de APIs HTTP públicas (§10) |
 | `wiki/` | Esta Wiki, versionada con el código (§5.9) |
 | `contexto_proyecto.md` | Resumen de arquitectura y contenido completo del código y la configuración (§5.10) |
@@ -21323,6 +21464,7 @@ El [README](../README.md) es la puerta de entrada (qué es el repo, cómo instal
 | [Compute](Compute.md) | Cómputo local vs. web: los 5 backends (local/colab/cloud-api/cloud-serverless/modal) y cómo elegir uno por proyecto |
 | [Dashboards](Dashboards.md) | Estética y revisión de dashboards con `apple-design-skill` (Apple HIG), checklist e instalación (§8) |
 | [Graft](Graft.md) | Grafo de contexto del código para agentes: instalación, wiring, qué se versiona, uso y telemetría (§9) |
+| [ClaudeCode](ClaudeCode.md) | Buenas prácticas de configuración de Claude Code: mínimos por repo, consulta previa, qué se audita y cómo actualizar el pin (§11) |
 | [Knowledge](Knowledge.md) | Bases de conocimiento públicas: catálogo `public-apis` fijado por commit, cómo citarlo y cómo actualizar el pin (§10) |
 
 ## Regla de actualización
@@ -21405,6 +21547,10 @@ El auditor exige `wiki/` con `Home.md`, `Architecture.md`, `Getting-Started.md` 
 ```bash
 python scripts/generate-contexto.py
 ```
+
+### Check de configuración de Claude Code (§11)
+
+`check_claude_config()` exige `AGENTS.md` o `CLAUDE.md`, ninguno de más de 200 líneas y, si existe `.claude/`, que `.gitignore` excluya `settings.local.json`. No revisa subagentes, skills ni `.claude/rules/`: eso queda para el PR que toca la configuración. Ver [ClaudeCode](ClaudeCode.md).
 
 ### Check de AGENTS.md (§5.11)
 

@@ -5,6 +5,7 @@
 * [Compute](Compute)
 * [Dashboards](Dashboards)
 * [Graft](Graft)
+* [Claude Code](ClaudeCode)
 * [Knowledge](Knowledge)
 * [RULES.md](../RULES.md)
 * [README](../README.md)

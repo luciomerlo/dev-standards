@@ -47,4 +47,5 @@ graph TD
 | §7 | Detección de CUDA, los 5 backends de cómputo, selección de UI/CLI, exclusión de modelos de difusión, implementación de referencia |
 | §8 | Estética de dashboards: `apple-design-skill` (Apple HIG) fijado por commit, revisión obligatoria en PR, mínimos de contraste/tamaño/color/gráficos, anti-plantilla, tokens |
 | §9 | Graft: grafo de contexto para agentes fijado a `0.19.0`, wiring versionado, `graft/` como caché, capa LLM opcional, telemetría deshabilitada |
+| §11 | Configuración de Claude Code: `claude-code-best-practice` fijado por commit como submódulo superficial en `knowledge/standards/`; `CLAUDE.md`/`AGENTS.md` de hasta 200 líneas, config personal fuera de git, subagentes y skills bien definidos; chequeo `check_claude_config()` |
 | §10 | Bases de conocimiento públicas: catálogos de terceros como submódulos fijados en `knowledge/public/`, consultados y no copiados. Primera entrada: `public-apis` |

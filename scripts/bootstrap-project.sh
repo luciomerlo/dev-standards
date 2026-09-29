@@ -11,11 +11,12 @@ PROJECT_DESC=""
 HAS_DASHBOARD=0
 REPO_ROOT="$(pwd)"
 
-# Estándares externos fijados (RULES.md §8.1, §9.1) y base pública (§10.2)
+# Estándares externos fijados (RULES.md §8.1, §9.1) base pública (§10.2) y buenas prácticas de Claude Code (§11.1)
 APPLE_DESIGN_URL="https://github.com/dickwu/apple-design-skill.git"
 APPLE_DESIGN_COMMIT="39ea3fbab3011e0798c076dbeabf4917001499da"
 GRAFT_VERSION="0.19.0"
 PUBLIC_APIS_COMMIT="7598f906a610c6d6ebf7adc2e72b6b5fccc7eba0"
+CLAUDE_BP_COMMIT="bfcf0b5abc7f9bb5da9bd41cbba070d9cef330d2"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -83,6 +84,9 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Claude Code: configuración personal (RULES.md §11.3)
+.claude/settings.local.json
 
 # Datos y artefactos
 data/
@@ -867,6 +871,7 @@ Este repositorio sigue [dev-standards](https://github.com/luciomerlo/dev-standar
 
 $DASHBOARD_LINE
 - **Graft (§9):** usar \`graft ask\` / \`graft callers\` antes de leer o cambiar código. El wiring se versiona en \`.claude/\` y \`.mcp.json\`; \`graft/\` no se versiona.
+- **Claude Code (§11):** \`CLAUDE.md\` y \`AGENTS.md\` de hasta 200 líneas por archivo, con comandos de build y test; \`.claude/settings.local.json\` fuera de git; subagentes con \`tools\` y skills con \`description\`. Buenas prácticas fijadas en dev-standards (\`knowledge/standards/claude-code-best-practice\`, commit \`${CLAUDE_BP_COMMIT:0:7}\`); consultarlas antes de proponer configuración.
 - **APIs públicas (§10):** antes de elegir una API HTTP pública, consultar el catálogo fijado en dev-standards (\`knowledge/public/public-apis\`, commit \`${PUBLIC_APIS_COMMIT:0:7}\`). No se copia a este repo.
 - **Rendimiento (§3.4):** con interfaz web, sugerir \`/fix\` al cerrar el desarrollo inicial, antes del primer release.
 - **Contexto (§5.10) y Wiki (§5.9):** regenerar \`contexto_proyecto.md\` y actualizar \`wiki/\` en el mismo cambio que altere código, uso o arquitectura.
